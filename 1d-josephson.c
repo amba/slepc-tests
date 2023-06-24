@@ -16,42 +16,70 @@ static char help[] = "Standard symmetric eigenproblem corresponding to the Lapla
 
 int main(int argc,char **argv)
 {
-  Mat            A;           /* problem matrix */
+  Mat            H;           /* BdG Hamiltonian */
   EPS            eps;         /* eigenproblem solver context */
   EPSType        type;
   PetscReal      error,tol,re,im;
   PetscScalar    kr,ki;
+  PetscScalar gap, sc_gap = 0.1, mu = 1;
   Vec            xr,xi;
-  PetscInt       n=500,i,Istart,Iend,nev,maxit,its,nconv;
-
+  PetscInt       i,nev,maxit,its,nconv;
+  PetscInt       N_sites = 1000;
+  
+  PetscMPIInt mpi_size;
+  
   PetscFunctionBeginUser;
   PetscCall(SlepcInitialize(&argc,&argv,(char*)0,help));
-
-  PetscCall(PetscOptionsGetInt(NULL,NULL,"-n",&n,NULL));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n1-D Laplacian Eigenproblem, n=%" PetscInt_FMT "\n\n",n));
+  PetscCall(PetscOptionsGetInt(NULL,NULL,"-n",&N_sites,NULL));
+  PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &mpi_size));
+  PetscCheck(mpi_size == 1, PETSC_COMM_WORLD, PETSC_ERR_WRONG_MPI_SIZE, "This is a uniprocessor example only!");
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n1-D Josephson junction\n"));
 
   PetscPrintf(PETSC_COMM_WORLD,"sizeof(petsc scalar): %lu, sizeof(petsc real): %lu\n", sizeof(PetscScalar), sizeof(PetscReal));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-     Compute the operator matrix that defines the eigensystem, Ax=kx
+     Compute the operator matrix that defines the eigensystem, H_{BdG}Φ = EΦ
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-  PetscCall(MatCreate(PETSC_COMM_WORLD,&A));
-  PetscCall(MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,n,n));
-  PetscCall(MatSetFromOptions(A));
-  PetscCall(MatSetUp(A));
+  PetscCall(MatCreate(PETSC_COMM_WORLD,&H));
+  PetscCall(MatSetSizes(H,PETSC_DECIDE,PETSC_DECIDE,2*N_sites,2*N_sites));
+  PetscCall(MatSetFromOptions(H));
+  PetscCall(MatSetUp(H));
 
-  PetscCall(MatGetOwnershipRange(A,&Istart,&Iend));
-  for (i=Istart;i<Iend;i++) {
-    if (i>0) PetscCall(MatSetValue(A,i,i-1,-1.0,INSERT_VALUES));
-    if (i<n-1) PetscCall(MatSetValue(A,i,i+1,-1.0,INSERT_VALUES));
-    PetscCall(MatSetValue(A,i,i,2.0,INSERT_VALUES));
+  for (i=0; i < N_sites; ++i) {
+    // on-site
+    // electron
+    PetscCall(MatSetValue(H,2*i,2*i, 2.0 - mu, INSERT_VALUES));
+
+    // hole
+    PetscCall(MatSetValue(H,2*i+1,2*i+1, -2.0 + mu, INSERT_VALUES));
+
+    
+    // SC gap parameter
+    gap =  i > N_sites/2 ? -sc_gap : sc_gap;
+    
+    PetscCall(MatSetValue(H,2*i,2*i+1, gap, INSERT_VALUES));
+    PetscCall(MatSetValue(H,2*i+1,2*i, PetscConjComplex(gap), INSERT_VALUES));
+    // hoppings
+    if (i>0) {
+      //electron
+      PetscCall(MatSetValue(H,2*i,2*(i-1),-1.0,INSERT_VALUES));
+      //hole
+      PetscCall(MatSetValue(H,2*i+1,2*(i-1)+1,1.0,INSERT_VALUES));
+    }
+    
+    if (i<N_sites-1) {
+      //electron
+      PetscCall(MatSetValue(H,2*i,2*(i+1),-1.0,INSERT_VALUES));
+      //hole
+      PetscCall(MatSetValue(H,2*i+1,2*(i+1)+1,1.0,INSERT_VALUES));
+    }
   }
-  PetscCall(MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY));
-  PetscCall(MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyBegin(H,MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(H,MAT_FINAL_ASSEMBLY));
 
-  PetscCall(MatCreateVecs(A,NULL,&xr));
-  PetscCall(MatCreateVecs(A,NULL,&xi));
+  PetscCall(MatCreateVecs(H,NULL,&xr));
+  PetscCall(MatCreateVecs(H,NULL,&xi));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 Create the eigensolver and set various options
@@ -64,7 +92,7 @@ int main(int argc,char **argv)
   /*
      Set operators. In this case, it is a standard eigenvalue problem
   */
-  PetscCall(EPSSetOperators(eps,A,NULL));
+  PetscCall(EPSSetOperators(eps,H,NULL));
   PetscCall(EPSSetProblemType(eps,EPS_HEP));
 
   /*
@@ -133,10 +161,10 @@ int main(int argc,char **argv)
   /*
      Free work space
   */
-  PetscCall(EPSDestroy(&eps));
-  PetscCall(MatDestroy(&A));
-  PetscCall(VecDestroy(&xr));
-  PetscCall(VecDestroy(&xi));
-  PetscCall(SlepcFinalize());
+  /* PetscCall(EPSDestroy(&eps)); */
+  /* PetscCall(MatDestroy(&H)); */
+  /* PetscCall(VecDestroy(&xr)); */
+  /* PetscCall(VecDestroy(&xi)); */
+  /* PetscCall(SlepcFinalize()); */
   return 0;
 }
