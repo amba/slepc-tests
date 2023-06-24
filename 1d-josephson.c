@@ -19,10 +19,9 @@ int main(int argc,char **argv)
   Mat            H;           /* BdG Hamiltonian */
   EPS            eps;         /* eigenproblem solver context */
   EPSType        type;
-  PetscReal      error,tol,re,im;
+  PetscReal      error,tol;
   PetscScalar    kr,ki;
   PetscScalar gap, sc_gap = 0.1, mu = 1;
-  Vec            xr,xi;
   PetscInt       i,nev,maxit,its,nconv;
   PetscInt       N_sites = 1000;
   
@@ -56,10 +55,10 @@ int main(int argc,char **argv)
 
     
     // SC gap parameter
-    gap =  i > N_sites/2 ? -sc_gap : sc_gap;
+   
     
-    PetscCall(MatSetValue(H,2*i,2*i+1, gap, INSERT_VALUES));
-    PetscCall(MatSetValue(H,2*i+1,2*i, PetscConjComplex(gap), INSERT_VALUES));
+    PetscCall(MatSetValue(H,2*i,2*i+1, 0, INSERT_VALUES));
+    PetscCall(MatSetValue(H,2*i+1,2*i, 0, INSERT_VALUES));
     // hoppings
     if (i>0) {
       //electron
@@ -78,86 +77,86 @@ int main(int argc,char **argv)
   PetscCall(MatAssemblyBegin(H,MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(H,MAT_FINAL_ASSEMBLY));
 
-  PetscCall(MatCreateVecs(H,NULL,&xr));
-  PetscCall(MatCreateVecs(H,NULL,&xi));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-                Create the eigensolver and set various options
+     Create the eigensolver and set various options
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   /*
-     Create eigensolver context
+    Create eigensolver context
   */
   PetscCall(EPSCreate(PETSC_COMM_WORLD,&eps));
 
   /*
-     Set operators. In this case, it is a standard eigenvalue problem
+    Set operators. In this case, it is a standard eigenvalue problem
   */
-  PetscCall(EPSSetOperators(eps,H,NULL));
   PetscCall(EPSSetProblemType(eps,EPS_HEP));
 
   /*
-     Set solver parameters at runtime
+    Set solver parameters at runtime
   */
   PetscCall(EPSSetFromOptions(eps));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-                      Solve the eigensystem
+     Solve the eigensystem
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-
-  PetscCall(EPSSolve(eps));
-  /*
-     Optional: Get some information from the solver and display it
-  */
-  PetscCall(EPSGetIterationNumber(eps,&its));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD," Number of iterations of the method: %" PetscInt_FMT "\n",its));
-  PetscCall(EPSGetType(eps,&type));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD," Solution method: %s\n\n",type));
-  PetscCall(EPSGetDimensions(eps,&nev,NULL,NULL));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD," Number of requested eigenvalues: %" PetscInt_FMT "\n",nev));
-  PetscCall(EPSGetTolerances(eps,&tol,&maxit));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD," Stopping condition: tol=%.4g, maxit=%" PetscInt_FMT "\n",(double)tol,maxit));
-
-  /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-                    Display solution and clean up
-     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  /*
-     Get number of converged approximate eigenpairs
-  */
-  PetscCall(EPSGetConverged(eps,&nconv));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD," Number of converged eigenpairs: %" PetscInt_FMT "\n\n",nconv));
-
-  if (nconv>0) {
-    /*
-       Display eigenvalues and relative errors
-    */
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD,
-         "           k          ||Ax-kx||/||kx||\n"
-         "   ----------------- ------------------\n"));
-
-    for (i=0;i<nconv;i++) {
-      /*
-        Get converged eigenpairs: i-th eigenvalue is stored in kr (real part) and
-        ki (imaginary part)
-      */
-      PetscCall(EPSGetEigenpair(eps,i,&kr,&ki,xr,xi));
-      /*
-         Compute the relative error associated to each eigenpair
-      */
-      PetscCall(EPSComputeError(eps,i,EPS_ERROR_RELATIVE,&error));
-
-#if defined(PETSC_USE_COMPLEX)
-      re = PetscRealPart(kr);
-      im = PetscImaginaryPart(kr);
-#else
-      re = kr;
-      im = ki;
-#endif
-      if (im!=0.0) PetscCall(PetscPrintf(PETSC_COMM_WORLD," %9f%+9fi %12g\n",(double)re,(double)im,(double)error));
-      else PetscCall(PetscPrintf(PETSC_COMM_WORLD,"   %12f       %12g\n",(double)re,(double)error));
+  for (PetscReal Phi = -3.141; Phi < 3.141; Phi += 0.1) {
+    for (i=0; i < N_sites; ++i) {
+      gap =  i > N_sites/2 ? sc_gap * PetscExpComplex(PETSC_i * Phi) : sc_gap;
+      PetscCall(MatSetValue(H,2*i,2*i+1, gap, INSERT_VALUES));
+      PetscCall(MatSetValue(H,2*i+1,2*i, PetscConjComplex(gap), INSERT_VALUES));
     }
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n"));
-  }
+    PetscCall(MatAssemblyBegin(H,MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(H,MAT_FINAL_ASSEMBLY));
+   
+    PetscCall(EPSSetOperators(eps,H,NULL));
+    /* PetscCall(EPSSetUp(eps)); */
+    PetscCall(EPSSolve(eps));
+    
+    /*
+      Optional: Get some information from the solver and display it
+    */
+    PetscCall(EPSGetIterationNumber(eps,&its));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD," Number of iterations of the method: %" PetscInt_FMT "\n",its));
+    PetscCall(EPSGetType(eps,&type));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD," Solution method: %s\n\n",type));
+    PetscCall(EPSGetDimensions(eps,&nev,NULL,NULL));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD," Number of requested eigenvalues: %" PetscInt_FMT "\n",nev));
+    PetscCall(EPSGetTolerances(eps,&tol,&maxit));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD," Stopping condition: tol=%.4g, maxit=%" PetscInt_FMT "\n",(double)tol,maxit));
 
+    /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+       Display solution and clean up
+       - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+    /*
+      Get number of converged approximate eigenpairs
+    */
+    PetscCall(EPSGetConverged(eps,&nconv));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD," Number of converged eigenpairs: %" PetscInt_FMT "\n\n",nconv));
+
+    if (nconv>0) {
+      /*
+        Display eigenvalues and relative errors
+      */
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD,
+                            "           k          ||Ax-kx||/||kx||\n"
+                            "   ----------------- ------------------\n"));
+
+      for (i=0;i<nconv;i++) {
+        /*
+          Get converged eigenpairs: i-th eigenvalue is stored in kr (real part) and
+          ki (imaginary part)
+        */
+        PetscCall(EPSGetEigenvalue(eps, i, &kr, &ki));
+        /*
+          Compute the relative error associated to each eigenpair
+        */
+        PetscCall(EPSComputeError(eps,i,EPS_ERROR_RELATIVE,&error));
+
+        PetscCall(PetscPrintf(PETSC_COMM_WORLD,"   %12f       %12g\n",(double)kr,(double)error));
+      }
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n"));
+    }
+  }
   /*
      Free work space
   */
