@@ -18,6 +18,7 @@ int main(int argc,char **argv)
 {
   Mat            H;           /* BdG Hamiltonian */
   EPS            eps;         /* eigenproblem solver context */
+  ST             st;          /* spectral transformation context */
   EPSType        type;
   PetscReal      error,tol;
   PetscScalar    kr,ki;
@@ -57,8 +58,8 @@ int main(int argc,char **argv)
     // SC gap parameter
    
     
-    PetscCall(MatSetValue(H,2*i,2*i+1, 0, INSERT_VALUES));
-    PetscCall(MatSetValue(H,2*i+1,2*i, 0, INSERT_VALUES));
+    PetscCall(MatSetValue(H,2*i,2*i+1, sc_gap, INSERT_VALUES));
+    PetscCall(MatSetValue(H,2*i+1,2*i, sc_gap, INSERT_VALUES));
     // hoppings
     if (i>0) {
       //electron
@@ -94,14 +95,19 @@ int main(int argc,char **argv)
   /*
     Set solver parameters at runtime
   */
+  PetscCall(EPSGetST(eps,&st));
+  PetscCall(STSetType(st,STSINVERT));
+  PetscCall(EPSSetDimensions(eps, 10, PETSC_DECIDE, PETSC_DECIDE));
+  PetscCall(EPSSetTarget(eps, 0));
+  PetscCall(EPSSetTolerances(eps, 1e-2, 1000));  
   PetscCall(EPSSetFromOptions(eps));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Solve the eigensystem
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   for (PetscReal Phi = -3.141; Phi < 3.141; Phi += 0.1) {
-    for (i=0; i < N_sites; ++i) {
-      gap =  i > N_sites/2 ? sc_gap * PetscExpComplex(PETSC_i * Phi) : sc_gap;
+    for (i=N_sites/2; i < N_sites; ++i) {
+      gap = sc_gap * PetscExpComplex(PETSC_i * Phi);
       PetscCall(MatSetValue(H,2*i,2*i+1, gap, INSERT_VALUES));
       PetscCall(MatSetValue(H,2*i+1,2*i, PetscConjComplex(gap), INSERT_VALUES));
     }

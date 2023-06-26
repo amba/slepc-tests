@@ -1,4 +1,4 @@
-default: ex1-slepc
+default: 1d-josephson
 
 include ${SLEPC_DIR}/lib/slepc/conf/slepc_common
 
