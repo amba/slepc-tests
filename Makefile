@@ -1,4 +1,4 @@
-default: 1d-josephson
+default: 1d-josephson 1d-josephson-spin
 
 include ${SLEPC_DIR}/lib/slepc/conf/slepc_common
 

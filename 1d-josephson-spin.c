@@ -7,29 +7,41 @@ static char help[] = "Standard symmetric eigenproblem corresponding to the Lapla
 static PetscReal const_hbar = 1.0545718176461565e-34;
 static PetscReal const_e = 1.602176634e-19;
 static PetscReal const_m_e = 9.1093837015e-31;
-static PetscReal const_mu_B = 9.2740100783e-24;
+// static PetscReal const_mu_B = 9.2740100783e-24;
 static PetscReal const_pi = 3.141592;
 
+static int set_phase(Mat H, PetscInt N_sites, PetscReal Phi) {
+  // need to assemble matrix after call
+  // assume that H is scaled with 1/|Δ|
+  for (PetscInt i=N_sites/2; i < N_sites; ++i) {
+    PetscScalar gap = PetscExpComplex(PETSC_i * Phi); 
+    PetscCall(MatSetValue(H,4*i  ,4*i+2, gap, INSERT_VALUES));
+    PetscCall(MatSetValue(H,4*i+1,4*i+3, gap, INSERT_VALUES));
+    PetscCall(MatSetValue(H,4*i+2,4*i, PetscConjComplex(gap), INSERT_VALUES));
+    PetscCall(MatSetValue(H,4*i+3,4*i+1, PetscConjComplex(gap), INSERT_VALUES));
+  }
+  return 0;
+}
 
-int main(int argc,char **argv) {
-  
+int main(int argc,char **argv)
+{
   Mat            H;           /* BdG Hamiltonian */
   EPS            eps;         /* eigenproblem solver context */
   ST             st;          /* spectral transformation context */
   PetscScalar    kr,ki;
-  PetscReal spacing = 5e-9;
   PetscReal m_eff = 0.03 * const_m_e;
   PetscReal sc_gap = 100e-6*const_e;
-  PetscScalar gap; // complex number!!
-  PetscReal mu = 10e-3 * const_e;
+  PetscReal mu = 20e-3 * const_e;
   PetscReal k_F = 1/const_hbar * sqrt(2 * m_eff * mu);
   PetscReal v_F = const_hbar * k_F / m_eff;
   PetscReal xi_0 = const_hbar * v_F / (const_pi * sc_gap);
   
   PetscReal lambda_F = 2*const_pi / k_F;
+  PetscReal spacing = lambda_F / 10;
+
   PetscReal t_hopping = const_hbar*const_hbar / (2 * m_eff * spacing*spacing);
   PetscInt       i,its,nconv;
-  PetscInt       N_evs = 8, N_sites = 1000;
+  PetscInt       N_evs = 16, N_sites = 1000;
   FILE *file;
   PetscMPIInt mpi_size;
 
@@ -40,11 +52,13 @@ int main(int argc,char **argv) {
   PetscCall(PetscOptionsGetInt(NULL,NULL,"-n",&N_sites,NULL));
   PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &mpi_size));
   PetscCheck(mpi_size == 1, PETSC_COMM_WORLD, PETSC_ERR_WRONG_MPI_SIZE, "This is a uniprocessor example only!");
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n1-D Josephson junction\n"));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n1-D Josephson junction with spin\n"));
   printf("t / Δ = %.2g\n",  t_hopping / sc_gap);
   printf("λ_F = %.2g\n", lambda_F);
   printf("λ_F / a = %.2g\n", lambda_F / spacing);
   printf("ξ_0 = %.2g\n", xi_0);
+  printf("L_electrode = %.2g\n", N_sites * spacing / 2);
+  printf("ξ_0 / L_electrode = %.2g\n", xi_0 / (N_sites * spacing / 2));
   
   PetscPrintf(PETSC_COMM_WORLD,"sizeof(petsc scalar): %lu, sizeof(petsc real): %lu\n", sizeof(PetscScalar), sizeof(PetscReal));
 
@@ -55,37 +69,45 @@ int main(int argc,char **argv) {
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
   PetscCall(MatCreate(PETSC_COMM_WORLD,&H));
-  PetscCall(MatSetSizes(H,PETSC_DECIDE,PETSC_DECIDE,2*N_sites,2*N_sites));
+  PetscCall(MatSetSizes(H,PETSC_DECIDE,PETSC_DECIDE,4*N_sites,4*N_sites));
   PetscCall(MatSetFromOptions(H));
   PetscCall(MatSetUp(H));
 
   for (i=0; i < N_sites; ++i) {
     // on-site
     // electron
-    PetscCall(MatSetValue(H,2*i,2*i, 2*t_hopping - mu, INSERT_VALUES));
+    PetscCall(MatSetValue(H,4*i,4*i, 2*t_hopping - mu, INSERT_VALUES));
+    PetscCall(MatSetValue(H,4*i+1,4*i+1, 2*t_hopping - mu, INSERT_VALUES));
 
     // hole
-    PetscCall(MatSetValue(H,2*i+1,2*i+1, -(2*t_hopping - mu), INSERT_VALUES));
+    PetscCall(MatSetValue(H,4*i+2,4*i+2, -(2*t_hopping - mu), INSERT_VALUES));
+    PetscCall(MatSetValue(H,4*i+3,4*i+3, -(2*t_hopping - mu), INSERT_VALUES));
 
     
     // SC gap parameter
    
     
-    PetscCall(MatSetValue(H,2*i,2*i+1, sc_gap, INSERT_VALUES));
-    PetscCall(MatSetValue(H,2*i+1,2*i, sc_gap, INSERT_VALUES));
+    PetscCall(MatSetValue(H,4*i  ,4*i+2, sc_gap, INSERT_VALUES));
+    PetscCall(MatSetValue(H,4*i+1,4*i+3, sc_gap, INSERT_VALUES));
+    PetscCall(MatSetValue(H,4*i+2,4*i, sc_gap, INSERT_VALUES));
+    PetscCall(MatSetValue(H,4*i+3,4*i+1, sc_gap, INSERT_VALUES));
     // hoppings
     if (i>0) {
       //electron
-      PetscCall(MatSetValue(H,2*i,2*(i-1),-t_hopping,INSERT_VALUES));
+      PetscCall(MatSetValue(H,4*i  ,4*i-4,-t_hopping,INSERT_VALUES));
+      PetscCall(MatSetValue(H,4*i+1,4*i-3,-t_hopping,INSERT_VALUES));
       //hole
-      PetscCall(MatSetValue(H,2*i+1,2*(i-1)+1,+t_hopping,INSERT_VALUES));
+      PetscCall(MatSetValue(H,4*i+2,4*i-2,t_hopping,INSERT_VALUES));
+      PetscCall(MatSetValue(H,4*i+3,4*i-1,t_hopping,INSERT_VALUES));
     }
     
     if (i<N_sites-1) {
       //electron
-      PetscCall(MatSetValue(H,2*i,2*(i+1),-t_hopping,INSERT_VALUES));
+      PetscCall(MatSetValue(H,4*i  ,4*i+4,-t_hopping,INSERT_VALUES));
+      PetscCall(MatSetValue(H,4*i+1,4*i+5,-t_hopping,INSERT_VALUES));
       //hole
-      PetscCall(MatSetValue(H,2*i+1,2*(i+1)+1,+t_hopping,INSERT_VALUES));
+      PetscCall(MatSetValue(H,4*i+2,4*i+6,t_hopping,INSERT_VALUES));
+      PetscCall(MatSetValue(H,4*i+3,4*i+7,t_hopping,INSERT_VALUES));
     }
   }
 
@@ -127,12 +149,7 @@ int main(int argc,char **argv) {
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   for (PetscReal Phi = -1.1*const_pi; Phi < 1.1*const_pi; Phi += 0.1) {
     printf("\n-------------------\nPhi = %g pi\n", Phi / const_pi);
-    for (i=N_sites/2; i < N_sites; ++i) {
-      gap = PetscExpComplex(PETSC_i * Phi); // H is now scaled with 1/|Δ|
-      //printf("gap = %f + i%f\n", creal(gap), cimag(gap));
-      PetscCall(MatSetValue(H,2*i,2*i+1, gap, INSERT_VALUES));
-      PetscCall(MatSetValue(H,2*i+1,2*i, PetscConjComplex(gap), INSERT_VALUES));
-    }
+    set_phase(H, N_sites, Phi);
     PetscCall(MatAssemblyBegin(H,MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(H,MAT_FINAL_ASSEMBLY));
     //    PetscCall(MatView(H, PETSC_VIEWER_STDOUT_SELF)); 
