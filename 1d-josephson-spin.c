@@ -7,7 +7,7 @@ static char help[] = "Standard symmetric eigenproblem corresponding to the Lapla
 static PetscReal const_hbar = 1.0545718176461565e-34;
 static PetscReal const_e = 1.602176634e-19;
 static PetscReal const_m_e = 9.1093837015e-31;
-// static PetscReal const_mu_B = 9.2740100783e-24;
+static PetscReal const_mu_B = 9.2740100783e-24;
 static PetscReal const_pi = 3.141592;
 
 static int set_phase(Mat H, PetscInt N_sites, PetscReal Phi) {
@@ -22,6 +22,22 @@ static int set_phase(Mat H, PetscInt N_sites, PetscReal Phi) {
   }
   return 0;
 }
+
+static int set_B(Mat H, PetscInt N_sites, PetscReal sc_gap, PetscReal gfactor, PetscReal B_x, PetscReal B_y) {
+  // need to assemble matrix after call
+  // assume that H is scaled with 1/|Δ|
+  // H_Z = 0.5 g* μ_B * (B_x σ_x + B_y σ_y)
+  // σ_x = [[0, 1], [1, 0]] , σ_y = [[0,-i], [i, 0]]
+  PetscScalar E_z = 0.5 * gfactor * const_mu_B * (B_x - PETSC_i * B_y) / sc_gap;
+  for (PetscInt i=0; i < N_sites; ++i) {
+    PetscCall(MatSetValue(H,4*i  ,4*i+1, E_z, INSERT_VALUES));
+    PetscCall(MatSetValue(H,4*i+1,4*i  , PetscConjComplex(E_z), INSERT_VALUES));
+    PetscCall(MatSetValue(H,4*i+2,4*i+3, E_z, INSERT_VALUES));
+    PetscCall(MatSetValue(H,4*i+3,4*i+2, PetscConjComplex(E_z), INSERT_VALUES));
+  }
+  return 0;
+}
+
 
 int main(int argc,char **argv)
 {
@@ -41,7 +57,7 @@ int main(int argc,char **argv)
 
   PetscReal t_hopping = const_hbar*const_hbar / (2 * m_eff * spacing*spacing);
   PetscInt       i,its,nconv;
-  PetscInt       N_evs = 16, N_sites = 1000;
+  PetscInt       N_evs = 32, N_sites = 4000;
   FILE *file;
   PetscMPIInt mpi_size;
 
@@ -63,16 +79,15 @@ int main(int argc,char **argv)
   PetscPrintf(PETSC_COMM_WORLD,"sizeof(petsc scalar): %lu, sizeof(petsc real): %lu\n", sizeof(PetscScalar), sizeof(PetscReal));
 
   /* Open file */
-  PetscCall(PetscFOpen(PETSC_COMM_WORLD, "output.dat", "w" , &file));
+  PetscCall(PetscFOpen(PETSC_COMM_WORLD, "output-spin.dat", "w" , &file));
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Compute the operator matrix that defines the eigensystem, H_{BdG}Φ = EΦ
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-
   PetscCall(MatCreate(PETSC_COMM_WORLD,&H));
   PetscCall(MatSetSizes(H,PETSC_DECIDE,PETSC_DECIDE,4*N_sites,4*N_sites));
   PetscCall(MatSetFromOptions(H));
   PetscCall(MatSetUp(H));
-
+  
   for (i=0; i < N_sites; ++i) {
     // on-site
     // electron
@@ -83,6 +98,11 @@ int main(int argc,char **argv)
     PetscCall(MatSetValue(H,4*i+2,4*i+2, -(2*t_hopping - mu), INSERT_VALUES));
     PetscCall(MatSetValue(H,4*i+3,4*i+3, -(2*t_hopping - mu), INSERT_VALUES));
 
+    // exchange coupling terms
+    PetscCall(MatSetValue(H,4*i  ,4*i+1, 0, INSERT_VALUES));
+    PetscCall(MatSetValue(H,4*i+1,4*i  , 0, INSERT_VALUES));
+    PetscCall(MatSetValue(H,4*i+2,4*i+3, 0, INSERT_VALUES));
+    PetscCall(MatSetValue(H,4*i+3,4*i+2, 0, INSERT_VALUES));
     
     // SC gap parameter
    
@@ -111,15 +131,12 @@ int main(int argc,char **argv)
     }
   }
 
-  
-
-  
   PetscCall(MatAssemblyBegin(H,MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(H,MAT_FINAL_ASSEMBLY));
-
   // rescale H with 1/|Δ| 
   PetscCall(MatScale(H, 1/sc_gap));
 
+  set_B(H, N_sites, sc_gap, 10, 0, 0.1);
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Create the eigensolver and set various options
