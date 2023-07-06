@@ -23,18 +23,49 @@ static int set_phase(Mat H, PetscInt N_sites, PetscReal Phi) {
   return 0;
 }
 
-static int set_B(Mat H, PetscInt N_sites, PetscReal sc_gap, PetscReal gfactor, PetscReal B_x, PetscReal B_y) {
+static int set_spin(Mat H, PetscInt N_sites, PetscReal spacing, PetscReal sc_gap, PetscReal gfactor, PetscReal B_x, PetscReal B_y, PetscReal alpha_rashba) {
   // need to assemble matrix after call
   // assume that H is scaled with 1/|Δ|
   // H_Z = 0.5 g* μ_B * (B_x σ_x + B_y σ_y)
   // σ_x = [[0, 1], [1, 0]] , σ_y = [[0,-i], [i, 0]]
   PetscScalar E_z = 0.5 * gfactor * const_mu_B * (B_x - PETSC_i * B_y) / sc_gap;
+  PetscReal SOC_term = alpha_rashba  / (2*spacing * sc_gap);
+  
   for (PetscInt i=0; i < N_sites; ++i) {
-    PetscCall(MatSetValue(H,4*i  ,4*i+1, E_z, INSERT_VALUES));
-    PetscCall(MatSetValue(H,4*i+1,4*i  , PetscConjComplex(E_z), INSERT_VALUES));
-    PetscCall(MatSetValue(H,4*i+2,4*i+3, E_z, INSERT_VALUES));
-    PetscCall(MatSetValue(H,4*i+3,4*i+2, PetscConjComplex(E_z), INSERT_VALUES));
+    // onsite terms
+
+    // electron
+    PetscCall(MatSetValue(H,4*i  ,4*i+1,
+                          E_z, INSERT_VALUES));
+    PetscCall(MatSetValue(H,4*i+1,4*i,
+                          PetscConjComplex(E_z), INSERT_VALUES));
+    // hole
+    PetscCall(MatSetValue(H,4*i+2,4*i+3,
+                          E_z, INSERT_VALUES));
+    PetscCall(MatSetValue(H,4*i+3,4*i+2,
+                          PetscConjComplex(E_z), INSERT_VALUES));
+
+    // hoppings -αk_xσ_y -> (α hbar / a) * [[0,1],[-1, 0]]
+    if (i > 0) {
+      //electron
+      PetscCall(MatSetValue(H,4*i  ,4*i-3,-SOC_term,INSERT_VALUES));
+      PetscCall(MatSetValue(H,4*i+1,4*i-4,+SOC_term,INSERT_VALUES));
+      //hole
+      PetscCall(MatSetValue(H,4*i+2,4*i-1,+SOC_term,INSERT_VALUES));
+      PetscCall(MatSetValue(H,4*i+3,4*i-2,-SOC_term,INSERT_VALUES));      
+
+    }
+    if (i<N_sites-1) {
+      //electron
+      PetscCall(MatSetValue(H,4*i  ,4*i+5,SOC_term,INSERT_VALUES));
+      PetscCall(MatSetValue(H,4*i+1,4*i+4,-SOC_term,INSERT_VALUES));
+      //hole
+      PetscCall(MatSetValue(H,4*i+2,4*i+7,-SOC_term,INSERT_VALUES));
+      PetscCall(MatSetValue(H,4*i+3,4*i+6,SOC_term,INSERT_VALUES));
+    }
   }
+
+  
   return 0;
 }
 
@@ -47,7 +78,7 @@ int main(int argc,char **argv)
   PetscScalar    kr,ki;
   PetscReal m_eff = 0.03 * const_m_e;
   PetscReal sc_gap = 100e-6*const_e;
-  PetscReal mu = 20e-3 * const_e;
+  PetscReal mu = 2e-3 * const_e;
   PetscReal k_F = 1/const_hbar * sqrt(2 * m_eff * mu);
   PetscReal v_F = const_hbar * k_F / m_eff;
   PetscReal xi_0 = const_hbar * v_F / (const_pi * sc_gap);
@@ -93,7 +124,7 @@ int main(int argc,char **argv)
     // electron
     PetscCall(MatSetValue(H,4*i,4*i, 2*t_hopping - mu, INSERT_VALUES));
     PetscCall(MatSetValue(H,4*i+1,4*i+1, 2*t_hopping - mu, INSERT_VALUES));
-
+  
     // hole
     PetscCall(MatSetValue(H,4*i+2,4*i+2, -(2*t_hopping - mu), INSERT_VALUES));
     PetscCall(MatSetValue(H,4*i+3,4*i+3, -(2*t_hopping - mu), INSERT_VALUES));
@@ -119,6 +150,14 @@ int main(int argc,char **argv)
       //hole
       PetscCall(MatSetValue(H,4*i+2,4*i-2,t_hopping,INSERT_VALUES));
       PetscCall(MatSetValue(H,4*i+3,4*i-1,t_hopping,INSERT_VALUES));
+
+      // for SOC (k x σ)
+      //electron
+      PetscCall(MatSetValue(H,4*i  ,4*i-3,0,INSERT_VALUES));
+      PetscCall(MatSetValue(H,4*i+1,4*i-4,0,INSERT_VALUES));
+      //hole
+      PetscCall(MatSetValue(H,4*i+2,4*i-1,0,INSERT_VALUES));
+      PetscCall(MatSetValue(H,4*i+3,4*i-2,0,INSERT_VALUES));
     }
     
     if (i<N_sites-1) {
@@ -128,6 +167,14 @@ int main(int argc,char **argv)
       //hole
       PetscCall(MatSetValue(H,4*i+2,4*i+6,t_hopping,INSERT_VALUES));
       PetscCall(MatSetValue(H,4*i+3,4*i+7,t_hopping,INSERT_VALUES));
+      
+      // for SOC (k x σ)
+      //electron
+      PetscCall(MatSetValue(H,4*i  ,4*i+5,0,INSERT_VALUES));
+      PetscCall(MatSetValue(H,4*i+1,4*i+4,0,INSERT_VALUES));
+      //hole
+      PetscCall(MatSetValue(H,4*i+2,4*i+7,0,INSERT_VALUES));
+      PetscCall(MatSetValue(H,4*i+3,4*i+6,0,INSERT_VALUES));
     }
   }
 
@@ -136,7 +183,7 @@ int main(int argc,char **argv)
   // rescale H with 1/|Δ| 
   PetscCall(MatScale(H, 1/sc_gap));
 
-  set_B(H, N_sites, sc_gap, 10, 0, 0.1);
+  set_spin(H, N_sites, spacing, sc_gap, 10, 0, 0.3, 300*1e-3 * const_e * 1e-9);
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Create the eigensolver and set various options
