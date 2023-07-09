@@ -51,8 +51,10 @@ print("num_evs = ", num_evs)
 # cpr for each ky
 ky_vals = data[:,0,0]
 phi_vals = data[0,:,1]
+N_phi = phi_vals.size
 
 eta_vals = []
+phi0_vals = []
 for block in data:
     F_vals = []
     k_y = block[0,0]
@@ -62,6 +64,7 @@ for block in data:
 #        evs = evs[0:20]
         F_vals.append(np.sum(evs))
     F_vals = np.array(F_vals)
+    phi0_vals.append(phi_vals[np.argmin(F_vals)])
     #plt.plot(phi_vals/np.pi, F_vals, label="k_y = %g" % k_y)
     I_vals = np.gradient(F_vals)
     I_max = np.amax(I_vals)
@@ -76,5 +79,10 @@ plt.legend()
 plt.grid()
 plt.show()
 
-plt.plot(ky_vals, eta_vals)
+
+
+phi0_vals = np.array(phi0_vals)
+plt.xlabel('k_y')
+plt.ylabel('phi0 / π')
+plt.plot(ky_vals, phi0_vals / np.pi)
 plt.show()
