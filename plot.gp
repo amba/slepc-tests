@@ -4,6 +4,6 @@ set term qt persist
 set xlabel 'φ / π'
 set ylabel 'E / Δ'
 set grid
-
-plot for [i=2:32] 'output-spin.dat' using ($1/pi):i notitle
+set palette defined (0 'blue', 1 'red')
+plot for [i=3:34] 'output-spin.dat' using ($2/pi):i:1 palette pt 7 ps 1 notitle
 pause mouse close
