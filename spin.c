@@ -83,7 +83,7 @@ static int allocate_matrix(Mat *h, PetscInt N_sites_leads, PetscInt N_sites_JJ) 
   return 0;
 }
 
-static int set_normal_hamiltonian(Mat H, PetscInt N_sites_leads, PetscInt N_sites_JJ, PetscReal sc_gap, PetscReal mu, PetscReal t_hopping) {
+static int set_normal_hamiltonian(Mat H, PetscInt N_sites_leads, PetscInt N_sites_JJ, PetscReal sc_gap, PetscReal mu, PetscReal t_hopping, PetscReal junction_potential) {
   PetscInt N_sites = 2*N_sites_leads + N_sites_JJ;
   mu /= sc_gap;
   t_hopping /= sc_gap;
@@ -91,12 +91,14 @@ static int set_normal_hamiltonian(Mat H, PetscInt N_sites_leads, PetscInt N_site
   for (int i=0; i < N_sites; ++i) {
     // on-site
     // electron
-    PetscCall(MatSetValue(H,4*i,4*i, 2*t_hopping - mu, INSERT_VALUES));
-    PetscCall(MatSetValue(H,4*i+1,4*i+1, 2*t_hopping - mu, INSERT_VALUES));
+    PetscReal site_potential = junction_potential * exp(-pow(((double) i - (double) N_sites/2) / N_sites_JJ,2)) / sc_gap;
+    // printf("i = %d, site_potential = %.2g\n", i, site_potential);
+    PetscCall(MatSetValue(H,4*i,4*i, 2*t_hopping - mu + site_potential, INSERT_VALUES));
+    PetscCall(MatSetValue(H,4*i+1,4*i+1, 2*t_hopping - mu + site_potential, INSERT_VALUES));
   
     // hole
-    PetscCall(MatSetValue(H,4*i+2,4*i+2, -(2*t_hopping - mu), INSERT_VALUES));
-    PetscCall(MatSetValue(H,4*i+3,4*i+3, -(2*t_hopping - mu), INSERT_VALUES));
+    PetscCall(MatSetValue(H,4*i+2,4*i+2, -(2*t_hopping - mu + site_potential), INSERT_VALUES));
+    PetscCall(MatSetValue(H,4*i+3,4*i+3, -(2*t_hopping - mu + site_potential), INSERT_VALUES));
 
     // hoppings
     if (i>0) {
@@ -247,7 +249,6 @@ int main(int argc,char **argv)
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
  
   allocate_matrix(&H, N_sites_leads, N_sites_JJ);
-  set_normal_hamiltonian(H,  N_sites_leads, N_sites_JJ, sc_gap, mu, t_hopping);
  
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Create the eigensolver and set various options
@@ -276,22 +277,22 @@ int main(int argc,char **argv)
      Solve the eigensystem
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   PetscCall(PetscFPrintf(PETSC_COMM_WORLD, file, "# k_y phi evs ...\n"));
-  for (PetscReal k_y = 0; k_y < k_F; k_y += k_F / 50) {
+  for (PetscReal k_y = 0; k_y < 0.9 * k_F; k_y += k_F / 50) {
     for (PetscReal Phi = -1.1*const_pi; Phi < 1.1*const_pi; Phi += 0.02 * const_pi) {
       printf("\n-------------------\nk_y / k_F = %.3g  Phi = %.3g pi\n", k_y / k_F, Phi / const_pi);
-      set_normal_hamiltonian(H,  N_sites_leads, N_sites_JJ, sc_gap, mu - pow(k_y*const_hbar,2) / (2*m_eff), t_hopping);
+      set_normal_hamiltonian(H,  N_sites_leads, N_sites_JJ, sc_gap, mu - pow(k_y*const_hbar,2) / (2*m_eff), t_hopping, mu*0.75);
       set_pairing(H, N_sites_leads, N_sites_JJ, Phi);
       set_spin(H, N_sites, spacing, sc_gap,
                -10,                  // g-factor
                0,                   // B_x
-               0.2,                 // B_y
+               0.1,                 // B_y
                k_y,                   // k_y
                30 *1e-3 * const_e * 1e-9); // α
       
     
       PetscCall(MatAssemblyBegin(H,MAT_FINAL_ASSEMBLY));
       PetscCall(MatAssemblyEnd(H,MAT_FINAL_ASSEMBLY));
-      //    PetscCall(MatView(H, PETSC_VIEWER_STDOUT_SELF)); 
+      // PetscCall(MatView(H, PETSC_VIEWER_STDOUT_SELF)); 
     
       PetscCall(EPSSetOperators(eps,H,NULL));
       PetscCall(EPSSolve(eps));
