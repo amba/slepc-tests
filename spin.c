@@ -85,7 +85,6 @@ static int allocate_matrix(Mat *h, PetscInt N_sites_leads, PetscInt N_sites_JJ) 
 
 static int set_normal_hamiltonian(Mat H, PetscInt N_sites_leads, PetscInt N_sites_JJ, PetscReal sc_gap, PetscReal mu, PetscReal t_hopping) {
   PetscInt N_sites = 2*N_sites_leads + N_sites_JJ;
-  
   mu /= sc_gap;
   t_hopping /= sc_gap;
   
@@ -270,23 +269,25 @@ int main(int argc,char **argv)
   PetscCall(STSetType(st,STSINVERT));
   PetscCall(EPSSetDimensions(eps, N_evs, PETSC_DECIDE, PETSC_DECIDE));
   PetscCall(EPSSetTarget(eps, 0));
-  PetscCall(EPSSetTolerances(eps, 1e-1, 1000));  
+  PetscCall(EPSSetTolerances(eps, 1e-12, 1000));  
   PetscCall(EPSSetFromOptions(eps));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Solve the eigensystem
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  for (PetscReal k_y = 0; k_y < k_F; k_y += k_F / 10) {
-    for (PetscReal Phi = -1.1*const_pi; Phi < 1.1*const_pi; Phi += 0.1) {
+  PetscCall(PetscFPrintf(PETSC_COMM_WORLD, file, "# k_y phi evs ...\n"));
+  for (PetscReal k_y = 0; k_y < k_F; k_y += k_F / 50) {
+    for (PetscReal Phi = -1.1*const_pi; Phi < 1.1*const_pi; Phi += 0.02 * const_pi) {
       printf("\n-------------------\nk_y / k_F = %.3g  Phi = %.3g pi\n", k_y / k_F, Phi / const_pi);
+      set_normal_hamiltonian(H,  N_sites_leads, N_sites_JJ, sc_gap, mu - pow(k_y*const_hbar,2) / (2*m_eff), t_hopping);
       set_pairing(H, N_sites_leads, N_sites_JJ, Phi);
       set_spin(H, N_sites, spacing, sc_gap,
-               10,                  // g-factor
+               -10,                  // g-factor
                0,                   // B_x
-               0.1,                 // B_y
+               0.2,                 // B_y
                k_y,                   // k_y
-               10 *1e-3 * const_e * 1e-9); // α
-
+               30 *1e-3 * const_e * 1e-9); // α
+      
     
       PetscCall(MatAssemblyBegin(H,MAT_FINAL_ASSEMBLY));
       PetscCall(MatAssemblyEnd(H,MAT_FINAL_ASSEMBLY));
