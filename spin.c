@@ -204,7 +204,7 @@ int main(int argc,char **argv)
   PetscScalar    kr,ki;
   PetscReal m_eff = 0.03 * const_m_e;
   PetscReal sc_gap = 100e-6*const_e;
-  PetscReal mu = 50e-3 * const_e;
+  PetscReal mu = 5e-3 * const_e;
   PetscReal k_F = 1/const_hbar * sqrt(2 * m_eff * mu);
   PetscReal v_F = const_hbar * k_F / m_eff;
   PetscReal xi_0 = const_hbar * v_F / (const_pi * sc_gap);
@@ -280,12 +280,12 @@ int main(int argc,char **argv)
   for (PetscReal k_y = 0; k_y < 0.9 * k_F; k_y += k_F / 50) {
     for (PetscReal Phi = -1.1*const_pi; Phi < 1.1*const_pi; Phi += 0.02 * const_pi) {
       printf("\n-------------------\nk_y / k_F = %.3g  Phi = %.3g pi\n", k_y / k_F, Phi / const_pi);
-      set_normal_hamiltonian(H,  N_sites_leads, N_sites_JJ, sc_gap, mu - pow(k_y*const_hbar,2) / (2*m_eff), t_hopping, mu*0.75);
+      set_normal_hamiltonian(H,  N_sites_leads, N_sites_JJ, sc_gap, mu - pow(k_y*const_hbar,2) / (2*m_eff), t_hopping, mu*0.9);
       set_pairing(H, N_sites_leads, N_sites_JJ, Phi);
       set_spin(H, N_sites, spacing, sc_gap,
                -10,                  // g-factor
                0,                   // B_x
-               0.1,                 // B_y
+               0.0,                 // B_y
                k_y,                   // k_y
                30 *1e-3 * const_e * 1e-9); // α
       
