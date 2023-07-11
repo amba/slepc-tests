@@ -61,7 +61,7 @@ for block in data:
     for line in block:
         all_evs = np.sort(line[2:])
         evs = -all_evs[int(num_evs/2):]
-#        evs = evs[0:20]
+       # evs = evs[0:32]
         F_vals.append(np.sum(evs))
     F_vals = np.array(F_vals)
     phi0_vals.append(phi_vals[np.argmin(F_vals)])
