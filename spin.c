@@ -1,5 +1,6 @@
 #include <slepceps.h>
-
+#include <sys/stat.h> // for mkdir
+#include <time.h>
 static char help[] = "Standard symmetric eigenproblem corresponding to the Laplacian operator in 1 dimension.\n\n"
   "The command line options are:\n"
   "  -n <n>, where <n> = number of grid subdivisions = matrix dimension.\n\n";
@@ -204,9 +205,10 @@ int main(int argc,char **argv)
   PetscScalar    kr,ki;
   PetscReal m_eff = 0.03 * const_m_e;
   PetscReal sc_gap = 100e-6*const_e;
-  PetscReal mu = 10e-3 * const_e;
-  PetscReal JJ_potential = 0.8*mu;
+  PetscReal mu = 200e-3 * const_e;
+  PetscReal JJ_potential = 0.9*mu;
   PetscReal B_y = 0.2;
+  PetscReal alpha_rashba =  30 *1e-3 * const_e * 1e-9;
   PetscReal k_F = 1/const_hbar * sqrt(2 * m_eff * mu);
   PetscReal v_F = const_hbar * k_F / m_eff;
   PetscReal xi_0 = const_hbar * v_F / (const_pi * sc_gap);
@@ -216,8 +218,9 @@ int main(int argc,char **argv)
 
   PetscReal t_hopping = const_hbar*const_hbar / (2 * m_eff * spacing*spacing);
   PetscInt       i,its,nconv;
-  PetscReal JJ_length = 500e-9;
+  PetscReal JJ_length = 80e-9;
   PetscInt       N_evs = 32, N_sites, N_sites_JJ, N_sites_leads;
+  char output_dir[200], output_file[300];
   FILE *file;
   PetscMPIInt mpi_size;
 
@@ -243,9 +246,16 @@ int main(int argc,char **argv)
   printf("ξ_0 / L_electrode = %.2g\n", xi_0 / (N_sites_leads * spacing));
   
 
-  /* Open file */
+  /* create output directory */
+  time_t t = time(NULL);
+  struct tm tm = *localtime(&t);
+  snprintf(output_dir, sizeof(output_dir), "%d-%02d-%02d_%02d-%02d-%02d_mu=%.2gmeV_By=%.2gT_LJJ=%.2gnm_JJpotential=%.2gmeV_alpha=%.2gmeVnm", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, mu / const_e * 1e3, B_y, JJ_length * 1e9, JJ_potential / const_e * 1e3, alpha_rashba / const_e * 1e12);
+  mkdir(output_dir, 0777);
+
+  snprintf(output_file, sizeof(output_file), "%s/output-spin.dat", output_dir);
+  printf("output file: %s\n", output_file);
+  file = fopen(output_file, "w");
   
-  file = fopen("output-spin.dat", "w");
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Compute the operator matrix that defines the eigensystem, H_{BdG}Φ = EΦ
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
@@ -289,7 +299,7 @@ int main(int argc,char **argv)
                0,                   // B_x
                B_y,                 // B_y
                k_y,                   // k_y
-               30 *1e-3 * const_e * 1e-9); // α
+               alpha_rashba); // α
       
     
       PetscCall(MatAssemblyBegin(H,MAT_FINAL_ASSEMBLY));
