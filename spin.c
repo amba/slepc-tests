@@ -205,10 +205,10 @@ int main(int argc,char **argv)
   PetscScalar    kr,ki;
   PetscReal m_eff = 0.03 * const_m_e;
   PetscReal sc_gap = 100e-6*const_e;
-  PetscReal mu = 200e-3 * const_e;
+  PetscReal mu = 250e-3 * const_e;
   PetscReal JJ_potential = 0.9*mu;
-  PetscReal B_y = 0.2;
-  PetscReal alpha_rashba =  30 *1e-3 * const_e * 1e-9;
+  PetscReal B_y = 0.3;
+  PetscReal alpha_rashba =  20 *1e-3 * const_e * 1e-9;
   PetscReal k_F = 1/const_hbar * sqrt(2 * m_eff * mu);
   PetscReal v_F = const_hbar * k_F / m_eff;
   PetscReal xi_0 = const_hbar * v_F / (const_pi * sc_gap);
