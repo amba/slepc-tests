@@ -205,10 +205,10 @@ int main(int argc,char **argv)
   PetscScalar    kr,ki;
   PetscReal m_eff = 0.03 * const_m_e;
   PetscReal sc_gap = 100e-6*const_e;
-  PetscReal mu = 250e-3 * const_e;
-  PetscReal JJ_potential = 0.9*mu;
+  PetscReal mu = 10e-3 * const_e;
+  PetscReal JJ_potential = 0.5*mu;
   PetscReal B_y = 0.3;
-  PetscReal alpha_rashba =  20 *1e-3 * const_e * 1e-9;
+  PetscReal alpha_rashba =  30 *1e-3 * const_e * 1e-9;
   PetscReal k_F = 1/const_hbar * sqrt(2 * m_eff * mu);
   PetscReal v_F = const_hbar * k_F / m_eff;
   PetscReal xi_0 = const_hbar * v_F / (const_pi * sc_gap);
@@ -219,7 +219,7 @@ int main(int argc,char **argv)
   PetscReal t_hopping = const_hbar*const_hbar / (2 * m_eff * spacing*spacing);
   PetscInt       i,its,nconv;
   PetscReal JJ_length = 80e-9;
-  PetscInt       N_evs = 32, N_sites, N_sites_JJ, N_sites_leads;
+  PetscInt       N_evs = 20, N_sites, N_sites_JJ, N_sites_leads;
   char output_dir[200], output_file[300];
   FILE *file;
   PetscMPIInt mpi_size;
@@ -232,12 +232,11 @@ int main(int argc,char **argv)
   PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &mpi_size));
   PetscCheck(mpi_size == 1, PETSC_COMM_WORLD, PETSC_ERR_WRONG_MPI_SIZE, "This is a uniprocessor example only!");
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n1-D Josephson junction with spin\n"));
-  printf("spacing = %.2g\n", spacing);
   printf("t / Δ = %.2g\n",  t_hopping / sc_gap);
   printf("λ_F = %.2g\n", lambda_F);
   printf("λ_F / a = %.2g\n", lambda_F / spacing);
   printf("ξ_0 = %.2g\n", xi_0);
-  N_sites_leads = 3*xi_0 / spacing;
+  N_sites_leads = 2*xi_0 / spacing;
   N_sites_JJ = JJ_length / spacing;
   N_sites = 2*N_sites_leads + N_sites_JJ;
   printf("N_sites = %d, N_sites_JJ = %d\n", N_sites, N_sites_JJ);
@@ -282,14 +281,14 @@ int main(int argc,char **argv)
   PetscCall(STSetType(st,STSINVERT));
   PetscCall(EPSSetDimensions(eps, N_evs, PETSC_DECIDE, PETSC_DECIDE));
   PetscCall(EPSSetTarget(eps, 0));
-  PetscCall(EPSSetTolerances(eps, 1e-12, 1000));  
+  PetscCall(EPSSetTolerances(eps, 1e-2, 1000));  
   PetscCall(EPSSetFromOptions(eps));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Solve the eigensystem
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   PetscCall(PetscFPrintf(PETSC_COMM_WORLD, file, "# k_y phi evs ...\n"));
-  for (PetscReal k_y = 0; k_y < 1.1 * k_F; k_y += k_F / 100) {
+  for (PetscReal k_y = 0; k_y < 1.2 * k_F; k_y += k_F / 50) {
     for (PetscReal Phi = -1.1*const_pi; Phi < 1.1*const_pi; Phi += 0.02 * const_pi) {
       printf("\n-------------------\nk_y / k_F = %.3g  Phi = %.3g pi\n", k_y / k_F, Phi / const_pi);
       set_normal_hamiltonian(H,  N_sites_leads, N_sites_JJ, sc_gap, mu - pow(k_y*const_hbar,2) / (2*m_eff), t_hopping, JJ_potential);

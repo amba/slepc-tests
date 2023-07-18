@@ -55,6 +55,7 @@ N_phi = phi_vals.size
 
 eta_vals = []
 phi0_vals = []
+all_I_vals = []
 for block in data:
     F_vals = []
     k_y = block[0,0]
@@ -67,6 +68,7 @@ for block in data:
     phi0_vals.append(phi_vals[np.argmin(F_vals)])
     #plt.plot(phi_vals/np.pi, F_vals, label="k_y = %g" % k_y)
     I_vals = np.gradient(F_vals)
+    all_I_vals.append(I_vals)
     I_max = np.amax(I_vals)
     I_min = np.amin(I_vals)
     eta = (I_max + I_min) / (I_max + np.abs(I_min))
@@ -79,10 +81,15 @@ plt.legend()
 plt.grid()
 plt.show()
 
-
-
-phi0_vals = np.array(phi0_vals)
-plt.xlabel('k_y')
-plt.ylabel('phi0 / π')
-plt.plot(ky_vals, phi0_vals / np.pi)
+all_I_vals = np.array(all_I_vals)
+print("all_I_vals: ", all_I_vals.shape)
+CPR = np.sum(all_I_vals,axis=0)
+plt.plot(phi_vals/np.pi, CPR)
+plt.grid()
 plt.show()
+#print(CPR.shape)
+# phi0_vals = np.array(phi0_vals)
+# plt.xlabel('k_y')
+# plt.ylabel('phi0 / π')
+# plt.plot(ky_vals, phi0_vals / np.pi)
+# plt.show()
