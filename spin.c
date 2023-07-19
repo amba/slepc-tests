@@ -199,16 +199,47 @@ static int set_spin(Mat H, PetscInt N_sites, PetscReal spacing, PetscReal sc_gap
 
 int main(int argc,char **argv)
 {
+
+  PetscMPIInt mpi_size;
+  
+  PetscFunctionBeginUser;
+  PetscCall(SlepcInitialize(&argc,&argv,(char*)0,help));
+  PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &mpi_size));
+  PetscCheck(mpi_size == 1, PETSC_COMM_WORLD, PETSC_ERR_WRONG_MPI_SIZE, "This is a uniprocessor example only!");
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n1-D Josephson junction with spin\n"));
+
+
+  PetscReal mu = 10; // meV
+  PetscReal JJ_potential = 5; // meV
+  PetscReal B_y = 0.5;
+  PetscReal alpha_rashba =  30 ;
+  PetscReal JJ_length = 100;
+  PetscInt N_evs = 20;
+  
+  PetscCall(PetscOptionsGetReal(NULL,NULL,"-mu",&mu,NULL));
+  PetscCall(PetscOptionsGetReal(NULL,NULL,"-pot",
+                                &JJ_potential,NULL));
+  PetscCall(PetscOptionsGetReal(NULL,NULL,"-alpha",&alpha_rashba,NULL));
+  PetscCall(PetscOptionsGetReal(NULL,NULL,"-length",&JJ_length,NULL));
+  PetscCall(PetscOptionsGetReal(NULL,NULL,"-B_y",&B_y,NULL));
+  PetscCall(PetscOptionsGetInt(NULL, NULL,"-Nevs", &N_evs, NULL));
+  // create_output_string_here
+  //
+  //
+  
+  mu *= 1e-3 * const_e;
+  JJ_potential *= 1e-3 * const_e;
+  alpha_rashba *= 1e-3 * const_e * 1e-9;
+  JJ_length *= 1e-9;
+  
+  
   Mat            H;           /* BdG Hamiltonian */
   EPS            eps;         /* eigenproblem solver context */
   ST             st;          /* spectral transformation context */
   PetscScalar    kr,ki;
-  PetscReal m_eff = 0.03 * const_m_e;
+  PetscReal m_eff = 0.036 * const_m_e;
   PetscReal sc_gap = 100e-6*const_e;
-  PetscReal mu = 10e-3 * const_e;
-  PetscReal JJ_potential = 0.5*mu;
-  PetscReal B_y = 0.3;
-  PetscReal alpha_rashba =  30 *1e-3 * const_e * 1e-9;
+  
   PetscReal k_F = 1/const_hbar * sqrt(2 * m_eff * mu);
   PetscReal v_F = const_hbar * k_F / m_eff;
   PetscReal xi_0 = const_hbar * v_F / (const_pi * sc_gap);
@@ -218,20 +249,15 @@ int main(int argc,char **argv)
 
   PetscReal t_hopping = const_hbar*const_hbar / (2 * m_eff * spacing*spacing);
   PetscInt       i,its,nconv;
-  PetscReal JJ_length = 80e-9;
-  PetscInt       N_evs = 20, N_sites, N_sites_JJ, N_sites_leads;
+  
+  PetscInt N_sites, N_sites_JJ, N_sites_leads;
   char output_dir[200], output_file[300];
   FILE *file;
-  PetscMPIInt mpi_size;
+
 
   
+
   
-  PetscFunctionBeginUser;
-  PetscCall(SlepcInitialize(&argc,&argv,(char*)0,help));
-  //  PetscCall(PetscOptionsGetInt(NULL,NULL,"-n",&N_sites,NULL));
-  PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &mpi_size));
-  PetscCheck(mpi_size == 1, PETSC_COMM_WORLD, PETSC_ERR_WRONG_MPI_SIZE, "This is a uniprocessor example only!");
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n1-D Josephson junction with spin\n"));
   printf("t / Δ = %.2g\n",  t_hopping / sc_gap);
   printf("λ_F = %.2g\n", lambda_F);
   printf("λ_F / a = %.2g\n", lambda_F / spacing);
@@ -281,7 +307,7 @@ int main(int argc,char **argv)
   PetscCall(STSetType(st,STSINVERT));
   PetscCall(EPSSetDimensions(eps, N_evs, PETSC_DECIDE, PETSC_DECIDE));
   PetscCall(EPSSetTarget(eps, 0));
-  PetscCall(EPSSetTolerances(eps, 1e-2, 1000));  
+  PetscCall(EPSSetTolerances(eps, 1e-5, 1000));  
   PetscCall(EPSSetFromOptions(eps));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -290,7 +316,8 @@ int main(int argc,char **argv)
   PetscCall(PetscFPrintf(PETSC_COMM_WORLD, file, "# k_y phi evs ...\n"));
   for (PetscReal k_y = 0; k_y < 1.2 * k_F; k_y += k_F / 50) {
     for (PetscReal Phi = -1.1*const_pi; Phi < 1.1*const_pi; Phi += 0.02 * const_pi) {
-      printf("\n-------------------\nk_y / k_F = %.3g  Phi = %.3g pi\n", k_y / k_F, Phi / const_pi);
+      printf("\n-------------------\nk_y / k_F = %.3g, φ = %.3g π\n", k_y / k_F, Phi / const_pi);
+
       set_normal_hamiltonian(H,  N_sites_leads, N_sites_JJ, sc_gap, mu - pow(k_y*const_hbar,2) / (2*m_eff), t_hopping, JJ_potential);
       set_pairing(H, N_sites_leads, N_sites_JJ, Phi);
       set_spin(H, N_sites, spacing, sc_gap,
@@ -313,7 +340,7 @@ int main(int argc,char **argv)
       */
       PetscCall(EPSGetIterationNumber(eps,&its));
       PetscCall(PetscPrintf(PETSC_COMM_WORLD," Number of iterations of the method: %" PetscInt_FMT "\n",its));
-
+      
       PetscCall(EPSGetConverged(eps,&nconv));
       PetscCall(PetscPrintf(PETSC_COMM_WORLD," Number of converged eigenpairs: %" PetscInt_FMT "\n\n",nconv));
 
