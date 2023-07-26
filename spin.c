@@ -11,11 +11,24 @@ static PetscReal const_m_e = 9.1093837015e-31;
 static PetscReal const_mu_B = 9.2740100783e-24;
 static PetscReal const_pi = 3.141592;
 
-static int allocate_matrix(Mat *h, PetscInt N_sites_leads, PetscInt N_sites_JJ) {
-  PetscInt N_sites = 2*N_sites_leads + N_sites_JJ;
+static PetscReal spacing;
+static PetscReal t_hopping;
+static PetscReal B_y = 0.5;
+static PetscReal B_x = 0;
+static PetscReal gfactor = 15;
 
-  PetscCall(MatCreate(PETSC_COMM_WORLD,h));
-  Mat H = *h;
+
+
+static  PetscReal sc_gap = 100e-6*const_e;
+
+
+static PetscReal alpha_rashba =  30; // meV nm
+
+static  PetscInt N_sites, N_sites_JJ, N_sites_leads;
+static Mat H;
+
+static int allocate_matrix() {
+  PetscCall(MatCreate(PETSC_COMM_WORLD,&H));
   PetscCall(MatSetSizes(H,PETSC_DECIDE,PETSC_DECIDE,4*N_sites,4*N_sites));
   PetscCall(MatSetFromOptions(H));
   PetscCall(MatSetUp(H));
@@ -84,8 +97,8 @@ static int allocate_matrix(Mat *h, PetscInt N_sites_leads, PetscInt N_sites_JJ) 
   return 0;
 }
 
-static int set_normal_hamiltonian(Mat H, PetscInt N_sites_leads, PetscInt N_sites_JJ, PetscReal sc_gap, PetscReal mu, PetscReal t_hopping, PetscReal junction_potential) {
-  PetscInt N_sites = 2*N_sites_leads + N_sites_JJ;
+static int set_normal_hamiltonian(PetscReal mu, PetscReal t_hopping, PetscReal sc_gap, PetscReal junction_potential) {
+  // mu is effective potential after removing hbar**2 k_y**2 / (2m*)
   mu /= sc_gap;
   t_hopping /= sc_gap;
   
@@ -125,7 +138,7 @@ static int set_normal_hamiltonian(Mat H, PetscInt N_sites_leads, PetscInt N_site
   return 0;
 }
 
-static int set_pairing(Mat H, PetscInt N_sites_leads, PetscInt N_sites_JJ, PetscReal Phi) {
+static int set_pairing(PetscReal Phi) {
   // need to assemble matrix after call
   // assume that H is scaled with 1/|Δ|
 
@@ -148,19 +161,24 @@ static int set_pairing(Mat H, PetscInt N_sites_leads, PetscInt N_sites_JJ, Petsc
   return 0;
 }
 
-static int set_spin(Mat H, PetscInt N_sites, PetscReal spacing, PetscReal sc_gap, PetscReal gfactor, PetscReal B_x, PetscReal B_y, PetscReal k_y, PetscReal alpha_rashba) {
+static int set_spin(PetscReal k_y) {
   // need to assemble matrix after call
   // assume that H is scaled with 1/|Δ|
   // H_Z = 0.5 g* μ_B * (B_x σ_x + B_y σ_y)
   // σ_x = [[0, 1], [1, 0]] , σ_y = [[0,-i], [i, 0]]
-  PetscScalar E_z = 0.5 * gfactor * const_mu_B * (B_x - PETSC_i * B_y) / sc_gap;
-  PetscReal SOC_term = alpha_rashba  / (2*spacing * sc_gap);
-
-  // Rashba SOC gives onsite term α k_y σ_x / Δ
-  PetscReal SOC_term_ky = alpha_rashba * k_y / sc_gap;
+   // Rashba SOC gives onsite term α k_y σ_x / Δ
   
   for (PetscInt i=0; i < N_sites; ++i) {
     // onsite terms
+    PetscScalar E_z = 0;
+    PetscReal SOC_term_ky = 0;
+    PetscReal SOC_term = 0;
+    if (i > N_sites_leads-1 && i < N_sites_leads + N_sites_JJ) {
+      // inside JJ
+      E_z = 0.5 * gfactor * const_mu_B * (B_x - PETSC_i * B_y) / sc_gap;
+      SOC_term_ky = alpha_rashba * k_y / sc_gap;
+      SOC_term = alpha_rashba  / (2*spacing * sc_gap);
+    }
     // electron
     PetscCall(MatSetValue(H,4*i  ,4*i+1,
                           E_z + SOC_term_ky, INSERT_VALUES));
@@ -171,24 +189,21 @@ static int set_spin(Mat H, PetscInt N_sites, PetscReal spacing, PetscReal sc_gap
                           E_z-SOC_term_ky, INSERT_VALUES));
     PetscCall(MatSetValue(H,4*i+3,4*i+2,
                           PetscConjComplex(E_z)-SOC_term_ky, INSERT_VALUES));
+    
 
     // hoppings -αk_xσ_y -> (α hbar / a) * [[0,1],[-1, 0]]
-    if (i > 0) {
-      //electron
-      PetscCall(MatSetValue(H,4*i  ,4*i-3,-SOC_term,INSERT_VALUES));
-      PetscCall(MatSetValue(H,4*i+1,4*i-4,+SOC_term,INSERT_VALUES));
-      //hole
-      PetscCall(MatSetValue(H,4*i+2,4*i-1,+SOC_term,INSERT_VALUES));
-      PetscCall(MatSetValue(H,4*i+3,4*i-2,-SOC_term,INSERT_VALUES));      
-
-    }
-    if (i<N_sites-1) {
+    // Have Rashba SOC only in normal region
+    if (i > N_sites_leads-1 && i < N_sites_leads + N_sites_JJ) {
       //electron
       PetscCall(MatSetValue(H,4*i  ,4*i+5,SOC_term,INSERT_VALUES));
       PetscCall(MatSetValue(H,4*i+1,4*i+4,-SOC_term,INSERT_VALUES));
+      PetscCall(MatSetValue(H,4*i+4  ,4*i+1,-SOC_term,INSERT_VALUES));
+      PetscCall(MatSetValue(H,4*i+5,4*i,+SOC_term,INSERT_VALUES));
       //hole
       PetscCall(MatSetValue(H,4*i+2,4*i+7,-SOC_term,INSERT_VALUES));
       PetscCall(MatSetValue(H,4*i+3,4*i+6,SOC_term,INSERT_VALUES));
+      PetscCall(MatSetValue(H,4*i+6,4*i+3,+SOC_term,INSERT_VALUES));
+      PetscCall(MatSetValue(H,4*i+7,4*i+2,-SOC_term,INSERT_VALUES)); 
     }
   }
 
@@ -208,17 +223,14 @@ int main(int argc,char **argv)
   PetscCheck(mpi_size == 1, PETSC_COMM_WORLD, PETSC_ERR_WRONG_MPI_SIZE, "This is a uniprocessor example only!");
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n1-D Josephson junction with spin\n"));
 
-
   PetscReal mu = 10; // meV
   PetscReal JJ_potential = 5; // meV
-  PetscReal B_y = 0.5;
-  PetscReal alpha_rashba =  30 ;
   PetscReal JJ_length = 100;
+  
   PetscInt N_evs = 20;
   
   PetscCall(PetscOptionsGetReal(NULL,NULL,"-mu",&mu,NULL));
-  PetscCall(PetscOptionsGetReal(NULL,NULL,"-pot",
-                                &JJ_potential,NULL));
+  PetscCall(PetscOptionsGetReal(NULL,NULL,"-pot", &JJ_potential,NULL));
   PetscCall(PetscOptionsGetReal(NULL,NULL,"-alpha",&alpha_rashba,NULL));
   PetscCall(PetscOptionsGetReal(NULL,NULL,"-length",&JJ_length,NULL));
   PetscCall(PetscOptionsGetReal(NULL,NULL,"-B_y",&B_y,NULL));
@@ -238,19 +250,20 @@ int main(int argc,char **argv)
   ST             st;          /* spectral transformation context */
   PetscScalar    kr,ki;
   PetscReal m_eff = 0.036 * const_m_e;
-  PetscReal sc_gap = 100e-6*const_e;
   
+
+
   PetscReal k_F = 1/const_hbar * sqrt(2 * m_eff * mu);
   PetscReal v_F = const_hbar * k_F / m_eff;
   PetscReal xi_0 = const_hbar * v_F / (const_pi * sc_gap);
   
   PetscReal lambda_F = 2*const_pi / k_F;
-  PetscReal spacing = lambda_F / 10;
+  spacing = lambda_F / 10;
 
   PetscReal t_hopping = const_hbar*const_hbar / (2 * m_eff * spacing*spacing);
   PetscInt       i,its,nconv;
   
-  PetscInt N_sites, N_sites_JJ, N_sites_leads;
+
   char output_dir[200], output_file[300];
   FILE *file;
 
@@ -318,8 +331,8 @@ int main(int argc,char **argv)
     for (PetscReal Phi = -1.1*const_pi; Phi < 1.1*const_pi; Phi += 0.02 * const_pi) {
       printf("\n-------------------\nk_y / k_F = %.3g, φ = %.3g π\n", k_y / k_F, Phi / const_pi);
 
-      set_normal_hamiltonian(H,  N_sites_leads, N_sites_JJ, sc_gap, mu - pow(k_y*const_hbar,2) / (2*m_eff), t_hopping, JJ_potential);
-      set_pairing(H, N_sites_leads, N_sites_JJ, Phi);
+      set_normal_hamiltonian(mu - pow(k_y*const_hbar,2) / (2*m_eff), JJ_potential);
+      set_pairing(Phi);
       set_spin(H, N_sites, spacing, sc_gap,
                -10,                  // g-factor
                0,                   // B_x
