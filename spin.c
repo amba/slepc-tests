@@ -155,18 +155,16 @@ static int set_spin(PetscReal spacing, PetscReal sc_gap, PetscReal gfactor, Pets
   // assume that H is scaled with 1/|Δ|
   // H_Z = 0.5 g* μ_B * (B_x σ_x + B_y σ_y)
   // σ_x = [[0, 1], [1, 0]] , σ_y = [[0,-i], [i, 0]]
-   // Rashba SOC gives onsite term α k_y σ_x / Δ
-  
+  // Rashba SOC gives onsite term α k_y σ_x / Δ
+  PetscReal SOC_term_ky =  alpha_rashba * k_y / sc_gap;
+  PetscReal SOC_term = alpha_rashba  / (2*spacing * sc_gap);
   for (PetscInt i=0; i < N_sites; ++i) {
     // onsite terms
     PetscScalar E_z = 0;
-    PetscReal SOC_term_ky = 0;
-    PetscReal SOC_term = 0;
+   
     if (i > N_sites_leads-1 && i < N_sites_leads + N_sites_JJ) {
       // inside JJ
       E_z = 0.5 * gfactor * const_mu_B * (B_x - PETSC_i * B_y) / sc_gap;
-      SOC_term_ky = alpha_rashba * k_y / sc_gap;
-      SOC_term = alpha_rashba  / (2*spacing * sc_gap);
     }
     // electron
     PetscCall(MatSetValue(H,4*i  ,4*i+1,
@@ -182,7 +180,7 @@ static int set_spin(PetscReal spacing, PetscReal sc_gap, PetscReal gfactor, Pets
 
     // hoppings -αk_xσ_y -> (α hbar / a) * [[0,1],[-1, 0]]
     // Have Rashba SOC only in normal region
-    if (i > N_sites_leads-1 && i < N_sites_leads + N_sites_JJ) {
+    if (i < N_sites - 1) {
       //electron
       PetscCall(MatSetValue(H,4*i  ,4*i+5,SOC_term,INSERT_VALUES));
       PetscCall(MatSetValue(H,4*i+1,4*i+4,-SOC_term,INSERT_VALUES));
