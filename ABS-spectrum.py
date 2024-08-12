@@ -25,13 +25,13 @@ def open_3d_file(file):
     for i, block in enumerate(list_of_blocks):
 #        print("reading block %d / %d" % (i, num_blocks))
         arrays.append(np.genfromtxt(io.StringIO(block)))
-    first_shape = arrays[0].shape
-    for i in range(len(arrays)-1, -1, -1):
-        shape = arrays[i].shape
-        if shape != first_shape:
-            print("block ", i, " with first line", arrays[i][0], " does not match :", shape, " != ", first_shape)
-            del arrays[i]
-    return np.stack(arrays), header
+    # first_shape = arrays[0].shape
+    # for i in range(len(arrays)-1, -1, -1):
+    #     shape = arrays[i].shape
+    #     if shape != first_shape:
+    #         print("block ", i, " with first line", arrays[i][0], " does not match :", shape, " != ", first_shape)
+    #         del arrays[i]
+    return arrays, header
 
 
 def save_3d_file(output_file, data, header):
@@ -46,18 +46,10 @@ def save_3d_file(output_file, data, header):
 
 data, header = open_3d_file("output-spin.dat")
 
-num_evs = data.shape[2] - 2
-print("num_evs = ", num_evs)
-# cpr for each ky
-ky_vals = data[:,0,0]
-phi_vals = data[0,:,1]
+phi_vals = data[0][:,1]
 N_phi = phi_vals.size
 
-eta_vals = []
-phi0_vals = []
-all_I_vals = []
 for block in data:
-    k_y = block[0,0]
     ev_vals = []
     for line in block:
         all_evs = np.sort(line[2:])

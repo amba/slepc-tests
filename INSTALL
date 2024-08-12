@@ -1,0 +1,26 @@
+
+Install Petsc into the home directory using the following steps:
+
+
+Add the following to .bashrc:
+
+    export PETSC_DIR=/home/simon/petsc
+    export PETSC_ARCH=linux-gnu-optimized
+
+Configure and install petsc:
+
+    ./configure PETSC_ARCH=linux-gnu-optimized --with-precision=single --with-scalar-type=complex  --with-fc=0 --with-debugging=0 COPTFLAGS='-O3 -march=native -mtune=native'
+    make all check
+
+
+Install Slepcs into the home directory using the following steps:
+
+     ./configure
+     make SLEPC_DIR=/home/simon/slepc-3.19.1 PETSC_DIR=/home/simon/petsc PETSC_ARCH=linux-gnu-optimized
+
+
+
+
+To compile the program with the Slepc libs use the following  makefile:
+
+include ${SLEPC_DIR}/lib/slepc/conf/slepc_common

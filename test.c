@@ -1,0 +1,331 @@
+#include <slepceps.h>
+#include <sys/stat.h> // for mkdir
+#include <petscmat.h>
+#include <time.h>
+static char help[] = "Standard symmetric eigenproblem corresponding to the Laplacian operator in 1 dimension.\n\n"
+  "The command line options are:\n"
+  "  -n <n>, where <n> = number of grid subdivisions = matrix dimension.\n\n";
+
+static PetscReal const_hbar = 1.0545718176461565e-34;
+static PetscReal const_e = 1.602176634e-19;
+static PetscReal const_m_e = 9.1093837015e-31;
+static PetscReal const_pi = 3.141592;
+
+
+
+static  PetscInt N_sites_x, N_sites_y, N_sites_JJ, N_sites_leads;
+static Mat H;
+
+int main(int argc,char **argv)
+{
+  printf("sizeof PetscReal = %d\n", sizeof(PetscReal));
+  printf("sizeof PetscScalar = %d\n", sizeof(PetscScalar));
+  printf("sizeof PetscInt = %d\n", sizeof(PetscInt));
+  
+  printf("const_e = %g\n", const_e);
+  return 0;
+}
+/* static int allocate_matrix() { */
+/*   PetscCall(MatCreate(PETSC_COMM_WORLD,&H)); */
+/*   PetscCall(MatSetSizes(H,PETSC_DECIDE,PETSC_DECIDE,2*N_sites_x * N_sites_y,2*N_sites_x*N_sites_y)); */
+/*   PetscCall(MatSetFromOptions(H)); */
+/*   PetscCall(MatSetUp(H)); */
+/*   // Fill each block (on-site terms + hoppings in x-direction) */
+/*   for (PetscInt iy = 0; iy < N_sites_y; ++iy) { */
+/*     for (PetscInt ix=0; ix < N_sites_x; ++ix) { */
+/*       PetscInt block_start = 2 * N_sites_x * iy; */
+/*       // on-site */
+/*       // electron */
+/*       PetscCall(MatSetValue(H,block_start + 2*ix,block_start + 2*ix, 0, INSERT_VALUES)); */
+  
+/*       // Hole */
+/*       PetscCall(MatSetValue(H,block_start + 2*ix+1,block_start + 2*ix+1, 0, INSERT_VALUES)); */
+/*       // SC gap parameter */
+   
+/*       if (ix < N_sites_leads || ix > N_sites_leads + N_sites_JJ) { */
+/*         PetscCall(MatSetValue(H,block_start + 2*ix,block_start + 2*ix+1, 0, INSERT_VALUES)); */
+/*         PetscCall(MatSetValue(H,block_start + 2*ix+1,block_start + 2*ix, 0, INSERT_VALUES)); */
+/*       } */
+/*       // Hoppings */
+/*       if (ix>0) { */
+/*         //electron */
+/*         PetscCall(MatSetValue(H,block_start + 2*ix  ,block_start + 2*ix-2,0,INSERT_VALUES)); */
+/*         //hole */
+/*         PetscCall(MatSetValue(H,block_start + 2*ix+1,block_start + 2*ix-1,0,INSERT_VALUES)); */
+
+/*       } */
+    
+/*       if (ix<N_sites_x-1) { */
+/*         //electron */
+/*         PetscCall(MatSetValue(H,block_start + 2*ix  ,block_start + 2*ix+2,0,INSERT_VALUES)); */
+/*         //hole */
+/*         PetscCall(MatSetValue(H,block_start + 2*ix+1,block_start + 2*ix+3,0,INSERT_VALUES)); */
+      
+/*       } */
+/*     } */
+/*   } */
+
+/*   // Fill diagonal blocks (hoppings in y-direction) */
+/*   for (PetscInt iy = 0; iy < N_sites_y-1; ++iy) { */
+/*     for (PetscInt ix=0; ix < N_sites_x; ++ix) { */
+/*       //electron */
+/*       PetscCall(MatSetValue(H,2*N_sites_x*iy+2*ix,2*N_sites_x*(iy+1)+2*ix ,0,INSERT_VALUES)); */
+/*       //hole */
+/*       PetscCall(MatSetValue(H,2*N_sites_x*iy+2*ix+1,2*N_sites_x*(iy+1)+2*ix+1 ,0,INSERT_VALUES)); */
+
+/*       //electron */
+/*       PetscCall(MatSetValue(H,2*N_sites_x*(iy+1)+2*ix,2*N_sites_x*(iy)+2*ix ,0,INSERT_VALUES)); */
+/*       //hole */
+/*       PetscCall(MatSetValue(H,2*N_sites_x*(iy+1)+2*ix+1,2*N_sites_x*(iy)+2*ix+1 ,0,INSERT_VALUES)); */
+/*     } */
+/*   } */
+/*   PetscCall(MatAssemblyBegin(H,MAT_FINAL_ASSEMBLY)); */
+/*   PetscCall(MatAssemblyEnd(H,MAT_FINAL_ASSEMBLY)); */
+/*   return 0; */
+/* } */
+
+/* static int set_normal_hamiltonian(PetscReal sc_gap,  PetscReal t_hopping, PetscReal mu, PetscReal disorder_potential) { */
+/*   // normalize hamiltonian with sc_gap */
+/*   mu /= sc_gap; */
+/*   t_hopping /= sc_gap; */
+
+/*   for (int iy = 0; iy < N_sites_y; ++iy) { */
+/*     PetscInt block_start = 2 * N_sites_x * iy; */
+/*     for (int ix=0; ix < N_sites_x; ++ix) { */
+/*       int neighbors = 4; */
+/*       if (ix == 0 || ix == N_sites_x - 1) */
+/*         neighbors -= 1; */
+/*       if (iy == 0 || iy == N_sites_y - 1) */
+/*         neighbors -= 1; */
+/*       // on-site */
+/*       // electron */
+/*       PetscReal site_potential = ((((float) rand()) / RAND_MAX) - 0.5) * disorder_potential / sc_gap; */
+/*       // printf("i = %d, site_potential = %.2g\n", i, site_potential); */
+/*       PetscCall(MatSetValue(H,block_start + 2*ix,block_start + 2*ix, neighbors*t_hopping - mu + site_potential, INSERT_VALUES)); */
+/*       // hole */
+/*       PetscCall(MatSetValue(H,block_start + 2*ix+1, block_start + 2*ix+1, -(neighbors*t_hopping - mu + site_potential), INSERT_VALUES)); */
+
+/*       // hoppings */
+/*       if (ix>0) { */
+/*         //electron */
+/*         PetscCall(MatSetValue(H,block_start + 2*ix, block_start + 2*ix-2,-t_hopping,INSERT_VALUES)); */
+ 
+/*         //hole */
+/*         PetscCall(MatSetValue(H,block_start + 2*ix+1  ,block_start + 2*ix-1,t_hopping,INSERT_VALUES)); */
+
+
+/*       } */
+    
+/*       if (ix<N_sites_x-1) { */
+/*         //electron */
+/*         PetscCall(MatSetValue(H,block_start + 2*ix  ,block_start + 2*ix+2,-t_hopping,INSERT_VALUES)); */
+     
+/*         //hole */
+/*         PetscCall(MatSetValue(H,block_start + 2*ix+1,block_start + 2*ix+3,t_hopping,INSERT_VALUES)); */
+
+      
+/*       } */
+/*     } */
+/*   } */
+/*   // Fill diagonal blocks (hoppings in y-direction) */
+/*   for (PetscInt iy = 0; iy < N_sites_y-1; ++iy) { */
+/*     for (PetscInt ix=0; ix < N_sites_x; ++ix) { */
+/*       //electron */
+/*       PetscCall(MatSetValue(H,2*N_sites_x*iy+2*ix,2*N_sites_x*(iy+1)+2*ix ,-t_hopping,INSERT_VALUES)); */
+/*       //hole */
+/*       PetscCall(MatSetValue(H,2*N_sites_x*iy+2*ix+1,2*N_sites_x*(iy+1)+2*ix+1 ,t_hopping,INSERT_VALUES)); */
+
+/*       //electron */
+/*       PetscCall(MatSetValue(H,2*N_sites_x*(iy+1)+2*ix,2*N_sites_x*(iy)+2*ix ,-t_hopping,INSERT_VALUES)); */
+/*       //hole */
+/*       PetscCall(MatSetValue(H,2*N_sites_x*(iy+1)+2*ix+1,2*N_sites_x*(iy)+2*ix+1 ,t_hopping,INSERT_VALUES)); */
+/*     } */
+/*   } */
+/*   return 0; */
+/* } */
+
+/* static int set_pairing(PetscReal Phi) { */
+/*   // need to assemble matrix after call */
+/*   // assume that H is scaled with 1/|Δ| */
+
+/*   for (int iy = 0; iy < N_sites_y; ++iy) { */
+/*     PetscInt block_start = 2*N_sites_x * iy; */
+/*     // left lead */
+/*     for (int ix=0; ix < N_sites_leads; ++ix) { */
+/*       PetscCall(MatSetValue(H,block_start + 2*ix  ,block_start + 2*ix + 1, 1, INSERT_VALUES)); */
+/*       PetscCall(MatSetValue(H,block_start + 2*ix + 1  ,block_start + 2*ix, 1, INSERT_VALUES)); */
+/*     } */
+
+/*     // right lead */
+/*     PetscScalar gap = PetscExpComplex(PETSC_i * Phi); */
+/*     for (int ix =N_sites_JJ + N_sites_leads; ix < N_sites_x; ++ix) { */
+/*       PetscCall(MatSetValue(H,block_start + 2*ix  ,block_start + 2*ix + 1, gap, INSERT_VALUES)); */
+/*       PetscCall(MatSetValue(H,block_start + 2*ix + 1  ,block_start + 2*ix, PetscConjComplex(gap), INSERT_VALUES)); */
+/*     } */
+/*   } */
+/*   return 0; */
+/* } */
+
+
+/* int main(int argc,char **argv) */
+/* { */
+
+/*   PetscMPIInt mpi_size; */
+  
+/*   PetscFunctionBeginUser; */
+/*   PetscCall(SlepcInitialize(&argc,&argv,(char*)0,help)); */
+/*   PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &mpi_size)); */
+/*   PetscCheck(mpi_size == 1, PETSC_COMM_WORLD, PETSC_ERR_WRONG_MPI_SIZE, "This is a uniprocessor example only!"); */
+/*   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n1-D Josephson junction with spin\n")); */
+
+/*   PetscReal mu = 10; // meV */
+/*   PetscReal disorder_potential = mu; // meV */
+/*   PetscReal JJ_length = 1; */
+ 
+/*   PetscInt N_evs = 20; */
+  
+/*   PetscCall(PetscOptionsGetReal(NULL,NULL,"-mu",&mu,NULL)); */
+/*   PetscCall(PetscOptionsGetReal(NULL,NULL,"-dis", &disorder_potential,NULL)); */
+/*   PetscCall(PetscOptionsGetReal(NULL,NULL,"-length",&JJ_length,NULL)); */
+/*   PetscCall(PetscOptionsGetInt(NULL, NULL,"-Nevs", &N_evs, NULL)); */
+/*   // create_output_string_here */
+/*   // */
+/*   // */
+  
+/*   mu *= 1e-3 * const_e; */
+/*   disorder_potential *= 1e-3 * const_e; */
+/*   JJ_length *= 1e-9; */
+  
+  
+/*   EPS            eps;         /\* eigenproblem solver context *\/ */
+/*   ST             st;          /\* spectral transformation context *\/ */
+/*   PetscScalar    kr,ki; */
+/*   PetscReal m_eff = 0.036 * const_m_e; */
+/*   PetscReal sc_gap = 100e-6*const_e; */
+
+
+
+/*   PetscReal k_F = 1/const_hbar * sqrt(2 * m_eff * mu); */
+/*   PetscReal v_F = const_hbar * k_F / m_eff; */
+/*   PetscReal xi_0 = const_hbar * v_F / (const_pi * sc_gap); */
+  
+/*   PetscReal lambda_F = 2*const_pi / k_F; */
+/*   PetscReal spacing = lambda_F / 10; */
+
+/*   PetscReal t_hopping = const_hbar*const_hbar / (2 * m_eff * spacing*spacing); */
+/*   PetscInt       i,its,nconv; */
+  
+
+/*   char output_dir[200], output_file[300]; */
+/*   FILE *file; */
+
+
+  
+
+  
+/*   printf("t / Δ = %.2g\n",  t_hopping / sc_gap); */
+/*   printf("λ_F = %.2g\n", lambda_F); */
+/*   printf("λ_F / a = %.2g\n", lambda_F / spacing); */
+/*   printf("ξ_0 = %.2g\n", xi_0); */
+/*   N_sites_leads = 400; */
+/*   //  N_sites_leads = 10*xi_0 / spacing; */
+/*   N_sites_JJ = 10; // JJ_length / spacing; */
+/*   N_sites_x = 2*N_sites_leads + N_sites_JJ; */
+/*   N_sites_y = 100; */
+/*   printf("N_sites_x = %d, N_sites_y = %d, N_sites_JJ = %d\n", N_sites_x, N_sites_y, N_sites_JJ); */
+/*   printf("L_electrode = %.2g\n", N_sites_leads * spacing); */
+  
+/*   printf("ξ_0 / L_electrode = %.2g\n", xi_0 / (N_sites_leads * spacing)); */
+  
+
+/*   /\* create output directory *\/ */
+/*   time_t t = time(NULL); */
+/*   struct tm tm = *localtime(&t); */
+/*   snprintf(output_dir, sizeof(output_dir), "%d-%02d-%02d_%02d-%02d-%02d_mu=%.2gmeV_LJJ=%.2gnm_JJpotential=%.2gmeV", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, mu / const_e * 1e3, JJ_length * 1e9, disorder_potential / const_e * 1e3); */
+/*   mkdir(output_dir, 0777); */
+
+/*   snprintf(output_file, sizeof(output_file), "%s/output-spin.dat", output_dir); */
+/*   printf("output file: %s\n", output_file); */
+/*   file = fopen(output_file, "w"); */
+  
+/*   /\* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*      Compute the operator matrix that defines the eigensystem, H_{BdG}Φ = EΦ */
+/*      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - *\/ */
+ 
+/*   allocate_matrix(); */
+/*   /\* set_normal_hamiltonian(sc_gap, t_hopping, mu, disorder_potential); *\/ */
+/*   /\* float Phi = const_pi; *\/ */
+/*   /\* set_pairing(Phi); *\/ */
+/*   /\* PetscCall(MatAssemblyBegin(H,MAT_FINAL_ASSEMBLY)); *\/ */
+/*   /\* PetscCall(MatAssemblyEnd(H,MAT_FINAL_ASSEMBLY)); *\/ */
+/*   /\* //  PetscCall(PetscViewerPushFormat(PETSC_VIEWER_STDOUT_SELF, PETSC_VIEWER_ASCII_DENSE)) ; *\/ */
+/*   /\* PetscCall(MatView(H, PETSC_VIEWER_STDOUT_SELF)); *\/ */
+/*   /\* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*      Create the eigensolver and set various options */
+/*      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - *\/ */
+/*   /\* */
+/*     Create eigensolver context */
+/*   *\/ */
+/*   PetscCall(EPSCreate(PETSC_COMM_WORLD,&eps)); */
+
+/*   /\* */
+/*     Set operators. In this case, it is a standard eigenvalue problem */
+/*   *\/ */
+/*   PetscCall(EPSSetProblemType(eps,EPS_HEP)); */
+
+/*   /\* */
+/*     Set solver parameters at runtime */
+/*   *\/ */
+/*   PetscCall(EPSGetST(eps,&st)); */
+/*   PetscCall(STSetType(st,STSINVERT)); */
+/*   PetscCall(EPSSetDimensions(eps, N_evs, PETSC_DECIDE, PETSC_DECIDE)); */
+/*   PetscCall(EPSSetTarget(eps, 0)); */
+/*   PetscCall(EPSSetTolerances(eps, 1e-10, 1000)); */
+/*   PetscCall(EPSSetFromOptions(eps)); */
+
+/*   /\* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*      Solve the eigensystem */
+/*      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - *\/ */
+/*   PetscCall(PetscFPrintf(PETSC_COMM_WORLD, file, "# disorder phi evs ...\n")); */
+/*   for (PetscReal disorder = 0; disorder < disorder_potential; disorder += disorder_potential / 10) { */
+/*     set_normal_hamiltonian(sc_gap, t_hopping, mu, disorder); */
+/*     for (PetscReal Phi = -1*const_pi; Phi <= 0; Phi += 0.05 * const_pi) { */
+/*       printf("\n-------------------\ndisorder / mu = %.3g, φ = %.3g π\n", disorder / mu, Phi / const_pi); */
+
+/*       struct timespec  t_start, t_end; */
+/*       clock_gettime(CLOCK_REALTIME, &t_start); */
+/*       set_pairing(Phi); */
+      
+    
+/*       PetscCall(MatAssemblyBegin(H,MAT_FINAL_ASSEMBLY)); */
+/*       PetscCall(MatAssemblyEnd(H,MAT_FINAL_ASSEMBLY)); */
+/*       //PetscCall(MatView(H, PETSC_VIEWER_STDOUT_SELF)); */
+/*       //exit(1); */
+/*       PetscCall(EPSSetOperators(eps,H,NULL)); */
+/*       PetscCall(EPSSolve(eps)); */
+/*       clock_gettime(CLOCK_REALTIME, &t_end); */
+/*       float duration = t_end.tv_sec - t_start.tv_sec + 1e-9 * (t_end.tv_nsec - t_start.tv_nsec); */
+/*       PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Duration for EPSSolve: %g s\n\n" ,duration)); */
+/*       /\* */
+/*         Optional: Get some information from the solver and display it */
+/*       *\/ */
+/*       PetscCall(EPSGetIterationNumber(eps,&its)); */
+/*       PetscCall(PetscPrintf(PETSC_COMM_WORLD," Number of iterations of the method: %" PetscInt_FMT "\n",its)); */
+      
+/*       PetscCall(EPSGetConverged(eps,&nconv)); */
+/*       PetscCall(PetscPrintf(PETSC_COMM_WORLD," Number of converged eigenpairs: %" PetscInt_FMT "\n\n",nconv)); */
+
+/*       PetscCheck(nconv >= N_evs, PETSC_COMM_WORLD, 1, "did not converge"); */
+/*       PetscCall(PetscFPrintf(PETSC_COMM_WORLD, file, "%.5g\t%.5g\t", disorder, Phi)); */
+
+/*       for (i = 0; i < nconv; ++i) { */
+/*         PetscCall(EPSGetEigenvalue(eps, i, &kr, &ki)); */
+/*         // printf("ev = %.3g\n", (double) kr); */
+/*         PetscCall(PetscFPrintf(PETSC_COMM_WORLD, file, "%.5g\t", (double ) kr)); */
+/*       } */
+/*       PetscCall(PetscFPrintf(PETSC_COMM_WORLD, file, "\n")); */
+/*     } */
+/*     PetscCall(PetscFPrintf(PETSC_COMM_WORLD, file, "\n")); */
+/*   } */
+/*   return 0; */
+/* } */
