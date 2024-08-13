@@ -167,8 +167,8 @@ int main(int argc,char **argv)
   PetscCheck(mpi_size == 1, PETSC_COMM_WORLD, PETSC_ERR_WRONG_MPI_SIZE, "This is a uniprocessor example only!");
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n1-D Josephson junction with spin\n"));
 
-  PetscReal mu = 10; // meV
-  PetscReal disorder_potential = mu; // meV
+  PetscReal mu = 10; // chemical potential (meV)
+  PetscReal disorder_potential = 2; // relative to chemical potential mu
  
 
   mu *= 1e-3 * const_e;
@@ -197,7 +197,7 @@ int main(int argc,char **argv)
   PetscCall(PetscOptionsGetInt(NULL,NULL,"-JJwidth",&N_sites_y,NULL));
   //PetscCall(PetscOptionsGetInt(NULL, NULL,"-Nevs", &N_evs, NULL));
   
-  disorder_potential *= 1e-3 * const_e;
+  disorder_potential *= mu;
   N_sites_x = 2*N_sites_leads + N_sites_JJ;
 
   printf("mu = %g\n", mu);
