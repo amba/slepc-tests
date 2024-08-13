@@ -73,7 +73,7 @@ for block in data:
     I_min = np.amin(I_vals)
     eta = (I_max + I_min) / (I_max + np.abs(I_min))
     eta_vals.append(eta)
-    plt.plot(phi_vals/np.pi, np.gradient(F_vals), label="k_y = %g" % k_y)
+    plt.plot(phi_vals/np.pi, np.gradient(F_vals), '.', label="disorder = %g" % k_y)
 plt.xlabel('phi / π')
 plt.ylabel('I (a.u.)')
 plt.legend()

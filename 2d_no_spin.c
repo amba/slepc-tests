@@ -2,9 +2,7 @@
 #include <sys/stat.h> // for mkdir
 #include <petscmat.h>
 #include <time.h>
-static char help[] = "Standard symmetric eigenproblem corresponding to the Laplacian operator in 1 dimension.\n\n"
-  "The command line options are:\n"
-  "  -n <n>, where <n> = number of grid subdivisions = matrix dimension.\n\n";
+static char help[] = "Bogoliuboev de-Gennes eigenvalue solver for SNS junctions with arbitrary disorder.\n\n";
 
 static PetscReal const_hbar = 1.0545718176461565e-34;
 static PetscReal const_e = 1.602176634e-19;
@@ -171,74 +169,62 @@ int main(int argc,char **argv)
 
   PetscReal mu = 10; // meV
   PetscReal disorder_potential = mu; // meV
-  PetscReal JJ_length = 1;
  
-  PetscInt N_evs = 20;
-  
-  PetscCall(PetscOptionsGetReal(NULL,NULL,"-mu",&mu,NULL));
-  PetscCall(PetscOptionsGetReal(NULL,NULL,"-dis", &disorder_potential,NULL));
-  PetscCall(PetscOptionsGetReal(NULL,NULL,"-length",&JJ_length,NULL));
-  PetscCall(PetscOptionsGetInt(NULL, NULL,"-Nevs", &N_evs, NULL));
-  // create_output_string_here
-  //
-  //
-  
+
   mu *= 1e-3 * const_e;
-  printf("mu = %g\n", mu);
-  disorder_potential *= 1e-3 * const_e;
-  JJ_length *= 1e-9;
-  
-  
-  EPS            eps;         /* eigenproblem solver context */
-  ST             st;          /* spectral transformation context */
-  PetscScalar    kr,ki;
+
   double m_eff = 0.036 * const_m_e;
   double sc_gap = 100e-6*const_e;
-  printf("sc_gap = %g, m_eff = %g, hbar = %g\n", sc_gap, m_eff, const_hbar);
   double k_F = sqrt(2 * m_eff * mu) / const_hbar;
-  
-  printf("k_F = %g\n", k_F);
   double v_F = const_hbar * k_F / m_eff;
   double xi_0 = const_hbar * v_F / (const_pi * sc_gap);
-  
   double lambda_F = 2*const_pi / k_F;
-  printf("lambda_F = %g\n", lambda_F);
   double spacing = lambda_F / 10;
   // need to convert to double, as hbar**2 is zero in single precision math
   double t_hopping = ((double) const_hbar)*const_hbar / (2 * m_eff * spacing*spacing);
-  
-  PetscInt       i,its,nconv;
-  
-
-  char output_dir[200], output_file[300];
-  FILE *file;
 
 
-  
+
+  N_sites_leads = 400;
+  //  N_sites_leads = 10*xi_0 / spacing;
+  N_sites_JJ = 10; // JJ_length / spacing;
+  N_sites_y = 100;
+
 
   
+  PetscCall(PetscOptionsGetReal(NULL,NULL,"-dis", &disorder_potential,NULL));
+  PetscCall(PetscOptionsGetInt(NULL,NULL,"-JJlength",&N_sites_JJ,NULL));
+  PetscCall(PetscOptionsGetInt(NULL,NULL,"-JJwidth",&N_sites_y,NULL));
+  //PetscCall(PetscOptionsGetInt(NULL, NULL,"-Nevs", &N_evs, NULL));
+  
+  disorder_potential *= 1e-3 * const_e;
+  N_sites_x = 2*N_sites_leads + N_sites_JJ;
+
+  printf("mu = %g\n", mu);
+  printf("L_electrode = %.2g\n", N_sites_leads * spacing);
+  printf("ξ_0 / L_electrode = %.2g\n", xi_0 / (N_sites_leads * spacing));
+  printf("sc_gap = %g, m_eff = %g, hbar = %g\n", sc_gap, m_eff, const_hbar);
+  printf("N_sites_x = %d, N_sites_y = %d, N_sites_JJ = %d\n", N_sites_x, N_sites_y, N_sites_JJ);
   printf("t / Δ = %.2g\n",  t_hopping / sc_gap);
   printf("λ_F = %.2g\n", lambda_F);
   printf("λ_F / a = %.2g\n", lambda_F / spacing);
   printf("ξ_0 = %.2g\n", xi_0);
-  N_sites_leads = 400;
-  //  N_sites_leads = 10*xi_0 / spacing;
-  N_sites_JJ = 10; // JJ_length / spacing;
-  N_sites_x = 2*N_sites_leads + N_sites_JJ;
-  N_sites_y = 100;
-  printf("N_sites_x = %d, N_sites_y = %d, N_sites_JJ = %d\n", N_sites_x, N_sites_y, N_sites_JJ);
-  printf("L_electrode = %.2g\n", N_sites_leads * spacing);
   
-  printf("ξ_0 / L_electrode = %.2g\n", xi_0 / (N_sites_leads * spacing));
-  
+  EPS            eps;         /* eigenproblem solver context */
+  ST             st;          /* spectral transformation context */
+  PetscScalar    kr,ki;
+  PetscInt N_evs = 2 * N_sites_y;
+  PetscInt       i,its,nconv;
+  char output_dir[200], output_file[300];
+  FILE *file;
 
   /* create output directory */
   time_t t = time(NULL);
   struct tm tm = *localtime(&t);
-  snprintf(output_dir, sizeof(output_dir), "%d-%02d-%02d_%02d-%02d-%02d_mu=%.2gmeV_LJJ=%.2gnm_JJpotential=%.2gmeV", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, mu / const_e * 1e3, JJ_length * 1e9, disorder_potential / const_e * 1e3);
+  snprintf(output_dir, sizeof(output_dir), "%d-%02d-%02d_%02d-%02d-%02d_mu=%.2gmeV_N-sites-JJ=%d_N-sites-y=%d_N-sites-x=%d_max-disorder=%g(mu)", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, mu / const_e * 1e3, N_sites_JJ, N_sites_y, N_sites_x, disorder_potential/mu);
   mkdir(output_dir, 0777);
 
-  snprintf(output_file, sizeof(output_file), "%s/output-spin.dat", output_dir);
+  snprintf(output_file, sizeof(output_file), "%s/output.dat", output_dir);
   printf("output file: %s\n", output_file);
   file = fopen(output_file, "w");
   
@@ -275,7 +261,7 @@ int main(int argc,char **argv)
   PetscCall(EPSSetDimensions(eps, N_evs, PETSC_DECIDE, PETSC_DECIDE));
   PetscCall(EPSSetTarget(eps, 0));
 
-  PetscCall(EPSSetTolerances(eps, 1e-8, 1000));
+  PetscCall(EPSSetTolerances(eps, 1e-10, 1000));
 
   // force the computation of the true residual
   //  PetscCall(EPSSetTrueResidual(eps, 0));
@@ -316,7 +302,7 @@ int main(int argc,char **argv)
       PetscCheck(nconv >= N_evs, PETSC_COMM_WORLD, 1, "did not converge");
       PetscCall(PetscFPrintf(PETSC_COMM_WORLD, file, "%.5g\t%.5g\t", disorder, Phi));
 
-      for (i = 0; i < nconv; ++i) {
+      for (i = 0; i < N_evs; ++i) {
         PetscCall(EPSGetEigenvalue(eps, i, &kr, &ki));
         // printf("ev = %.3g\n", (double) kr);
         PetscCall(PetscFPrintf(PETSC_COMM_WORLD, file, "%.5g\t", (double ) kr));
