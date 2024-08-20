@@ -270,7 +270,7 @@ int main(int argc,char **argv)
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Solve the eigensystem
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  PetscCall(PetscFPrintf(PETSC_COMM_WORLD, file, "# disorder phi evs ...\n"));
+  PetscCall(PetscFPrintf(PETSC_COMM_WORLD, file, "# disorder/μ phi/π evs ...\n"));
   for (double disorder = 0; disorder < disorder_potential; disorder += disorder_potential / 10) {
     set_normal_hamiltonian(sc_gap, t_hopping, mu, disorder);
     for (double Phi = -0.1*const_pi; Phi <= 1.1*const_pi; Phi += 0.02 * const_pi) {
@@ -300,7 +300,7 @@ int main(int argc,char **argv)
       PetscCall(PetscPrintf(PETSC_COMM_WORLD," Number of converged eigenpairs: %" PetscInt_FMT "\n\n",nconv));
 
       PetscCheck(nconv >= N_evs, PETSC_COMM_WORLD, 1, "did not converge");
-      PetscCall(PetscFPrintf(PETSC_COMM_WORLD, file, "%.5g\t%.5g\t", disorder, Phi));
+      PetscCall(PetscFPrintf(PETSC_COMM_WORLD, file, "%.5g\t%.5g\t", disorder / mu, Phi / const_pi));
 
       for (i = 0; i < N_evs; ++i) {
         PetscCall(EPSGetEigenvalue(eps, i, &kr, &ki));
