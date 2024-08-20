@@ -44,7 +44,7 @@ def save_3d_file(output_file, data, header):
 
 
 
-data, header = open_3d_file("output-spin.dat")
+data, header = open_3d_file("output.dat")
 
 num_evs = data.shape[2] - 2
 print("num_evs = ", num_evs)
@@ -59,40 +59,34 @@ all_I_vals = []
 for block in data:
     F_vals = []
     k_y = block[0,0]
+    ev_vals = []
     for line in block:
         all_evs = np.sort(line[2:])
-        evs = -all_evs[int(num_evs/2):]
-       # evs = evs[0:32]
-        F_vals.append(np.sum(evs))
+        i_start = np.argmax(all_evs > 0)
+        print("i_start = ", i_start, " first ev = ", all_evs[i_start])
+        
+        evs = all_evs[i_start:i_start + int(num_evs/2) - 2]
+        ev_vals.append(evs)
+        # evs = evs[0:32]
+        F_vals.append(-np.sum(evs))
     F_vals = np.array(F_vals)
     phi0_vals.append(phi_vals[np.argmin(F_vals)])
-    #plt.plot(phi_vals/np.pi, F_vals, label="k_y = %g" % k_y)
+    #plt.plot(phi_vals, F_vals, label="k_y = %g" % k_y)
     I_vals = np.gradient(F_vals)
     all_I_vals.append(I_vals)
     I_max = np.amax(I_vals)
     I_min = np.amin(I_vals)
     eta = (I_max + I_min) / (I_max + np.abs(I_min))
     eta_vals.append(eta)
-    plt.plot(phi_vals/np.pi, np.gradient(F_vals), '.', label="disorder = %g" % k_y)
+  #  plt.plot(phi_vals / np.pi, ev_vals)
+ #   plt.grid()
+#    plt.show()
+    #plt.plot(phi_vals / np.pi, F_vals, '.', label="disorder = %g" % k_y)
+    plt.plot(phi_vals, np.gradient(F_vals), label="disorder = %g" % k_y)
+
 plt.xlabel('phi / π')
 plt.ylabel('I (a.u.)')
 plt.legend()
 plt.grid()
 plt.show()
 
-all_I_vals = np.array(all_I_vals)
-CPR = np.sum(all_I_vals,axis=0)
-Ic_plus = np.amax(CPR)
-Ic_minus = np.amin(CPR)
-
-eta = 2*(Ic_plus + Ic_minus) / (Ic_plus + np.abs(Ic_minus))
-print("η = ΔIc/Ic = %.2g" % eta)
-plt.plot(phi_vals/np.pi, CPR)
-plt.grid()
-plt.show()
-#print(CPR.shape)
-# phi0_vals = np.array(phi0_vals)
-# plt.xlabel('k_y')
-# plt.ylabel('phi0 / π')
-# plt.plot(ky_vals, phi0_vals / np.pi)
-# plt.show()
