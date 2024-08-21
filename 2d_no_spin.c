@@ -171,6 +171,23 @@ int main(int argc,char **argv)
   PetscReal disorder_potential = 2; // relative to chemical potential mu
  
 
+
+  //  N_sites_leads = 400;
+  //  N_sites_leads = 10*xi_0 / spacing;
+  //N_sites_JJ = 10; // JJ_length / spacing;
+  //N_sites_y = 100;
+
+
+  
+  PetscCall(PetscOptionsGetReal(NULL,NULL,"-dis", &disorder_potential,NULL));
+  PetscCall(PetscOptionsGetInt(NULL,NULL,"-leadlength",&N_sites_leads,NULL));
+  PetscCall(PetscOptionsGetInt(NULL,NULL,"-JJlength",&N_sites_JJ,NULL));
+  PetscCall(PetscOptionsGetInt(NULL,NULL,"-JJwidth",&N_sites_y,NULL));
+  PetscCall(PetscOptionsGetReal(NULL,NULL,"-mu",&mu,NULL));
+
+
+
+  
   mu *= 1e-3 * const_e;
 
   double m_eff = 0.036 * const_m_e;
@@ -184,17 +201,7 @@ int main(int argc,char **argv)
   double t_hopping = ((double) const_hbar)*const_hbar / (2 * m_eff * spacing*spacing);
 
 
-
-  N_sites_leads = 400;
-  //  N_sites_leads = 10*xi_0 / spacing;
-  N_sites_JJ = 10; // JJ_length / spacing;
-  N_sites_y = 100;
-
-
   
-  PetscCall(PetscOptionsGetReal(NULL,NULL,"-dis", &disorder_potential,NULL));
-  PetscCall(PetscOptionsGetInt(NULL,NULL,"-JJlength",&N_sites_JJ,NULL));
-  PetscCall(PetscOptionsGetInt(NULL,NULL,"-JJwidth",&N_sites_y,NULL));
   //PetscCall(PetscOptionsGetInt(NULL, NULL,"-Nevs", &N_evs, NULL));
   
   disorder_potential *= mu;
@@ -215,18 +222,17 @@ int main(int argc,char **argv)
   PetscScalar    kr,ki;
   PetscInt N_evs = 2 * N_sites_y;
   PetscInt       i,its,nconv;
-  char output_dir[200], output_file[300];
-  FILE *file;
+  FILE *file = fopen("output.dat", "w");
 
-  /* create output directory */
-  time_t t = time(NULL);
-  struct tm tm = *localtime(&t);
-  snprintf(output_dir, sizeof(output_dir), "%d-%02d-%02d_%02d-%02d-%02d_mu=%.2gmeV_N-sites-JJ=%d_N-sites-y=%d_N-sites-x=%d_max-disorder=%g(mu)", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, mu / const_e * 1e3, N_sites_JJ, N_sites_y, N_sites_x, disorder_potential/mu);
-  mkdir(output_dir, 0777);
+  /* /\* create output directory *\/ */
+  /* time_t t = time(NULL); */
+  /* struct tm tm = *localtime(&t); */
+  /* snprintf(output_dir, sizeof(output_dir), "%d-%02d-%02d_%02d-%02d-%02d_mu=%.2gmeV_N-sites-JJ=%d_N-sites-y=%d_N-sites-x=%d_max-disorder=%g(mu)", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, mu / const_e * 1e3, N_sites_JJ, N_sites_y, N_sites_x, disorder_potential/mu); */
+  /* mkdir(output_dir, 0777); */
 
-  snprintf(output_file, sizeof(output_file), "%s/output.dat", output_dir);
-  printf("output file: %s\n", output_file);
-  file = fopen(output_file, "w");
+  /* snprintf(output_file, sizeof(output_file), "%s/output.dat", output_dir); */
+  /* printf("output file: %s\n", output_file); */
+  /* file = fopen(output_file, "w"); */
   
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Compute the operator matrix that defines the eigensystem, H_{BdG}Φ = EΦ

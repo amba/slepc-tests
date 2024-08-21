@@ -9,6 +9,7 @@ import os.path
 import sys
 import matplotlib.pyplot as plt
 import scipy.signal
+from scipy.optimize import curve_fit
 
 
 if np.__version__ < '1.14.1':
@@ -53,9 +54,12 @@ ky_vals = data[:,0,0]
 phi_vals = data[0,:,1]
 N_phi = phi_vals.size
 
-eta_vals = []
-phi0_vals = []
-all_I_vals = []
+def cpr(phi, tau, I0):
+    return I0 * tau * np.sin(phi*np.pi) / np.sqrt(1 - tau * np.sin(phi*np.pi/2)**2)
+    
+def cpr_KO1(phi, I0):
+    return I0 * np.cos(phi*np.pi/2) * np.arctanh(np.sin(phi * np.pi/2))
+
 for block in data:
     F_vals = []
     k_y = block[0,0]
@@ -70,19 +74,26 @@ for block in data:
         # evs = evs[0:32]
         F_vals.append(-np.sum(evs))
     F_vals = np.array(F_vals)
-    phi0_vals.append(phi_vals[np.argmin(F_vals)])
     #plt.plot(phi_vals, F_vals, label="k_y = %g" % k_y)
+    #plt.show()
     I_vals = np.gradient(F_vals)
-    all_I_vals.append(I_vals)
-    I_max = np.amax(I_vals)
-    I_min = np.amin(I_vals)
-    eta = (I_max + I_min) / (I_max + np.abs(I_min))
-    eta_vals.append(eta)
-  #  plt.plot(phi_vals / np.pi, ev_vals)
- #   plt.grid()
-#    plt.show()
+    #p0 = [0.8, np.amax(I_vals)]
+    p0 = [np.amax(I_vals),]
+    istart = np.argmin(phi_vals < 0)
+    iend = np.argmin(phi_vals[istart+1:] < 1)
+    fit = curve_fit(cpr_KO1, phi_vals[istart:istart+iend], I_vals[istart:istart+iend], p0 = p0)
+    
+    print(fit)
+    tau = fit[0][0]
+    
+    #    plt.plot(phi_vals / np.pi, ev_vals)
+    #    plt.grid()
+    #    plt.show()
     #plt.plot(phi_vals / np.pi, F_vals, '.', label="disorder = %g" % k_y)
-    plt.plot(phi_vals, np.gradient(F_vals), label="disorder = %g" % k_y)
+    I_vals = np.gradient(F_vals)
+   # I_vals /= np.amax(I_vals)
+    plt.plot(phi_vals, I_vals, label="disorder = %g" % (k_y,))
+    plt.plot(phi_vals, cpr_KO1(phi_vals, *fit[0]), label="tau = %g" % tau)
 
 plt.xlabel('phi / π')
 plt.ylabel('I (a.u.)')

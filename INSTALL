@@ -24,3 +24,10 @@ Install Slepcs into the home directory using the following steps:
 To compile the program with the Slepc libs use the following  makefile:
 
 include ${SLEPC_DIR}/lib/slepc/conf/slepc_common
+
+
+
+
+
+To use the perl wrapper script 'run.pl'
+install libmoosex-app-perl (on Debian based distros).
