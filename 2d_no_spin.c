@@ -258,7 +258,9 @@ int main(int argc,char **argv)
   */
   PetscCall(EPSGetST(eps,&st));
   PetscCall(STSetType(st,STSINVERT));
-  PetscCall(EPSSetDimensions(eps, N_evs, PETSC_DECIDE, PETSC_DECIDE));
+  int ncv = 1.5 * N_evs;
+  printf("requested eigenvalues: %d, subspace dimension: %d\n", N_evs, ncv);
+  PetscCall(EPSSetDimensions(eps, N_evs, ncv, PETSC_DECIDE));
   PetscCall(EPSSetTarget(eps, 0));
 
   PetscCall(EPSSetTolerances(eps, 1e-10, 1000));
@@ -271,7 +273,7 @@ int main(int argc,char **argv)
      Solve the eigensystem
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   PetscCall(PetscFPrintf(PETSC_COMM_WORLD, file, "# disorder/μ phi/π evs ...\n"));
-  for (double disorder = 0; disorder < disorder_potential; disorder += disorder_potential / 10) {
+  for (double disorder = 0; disorder < 1.0001 * disorder_potential; disorder += disorder_potential / 10) {
     set_normal_hamiltonian(sc_gap, t_hopping, mu, disorder);
     for (double Phi = -0.1*const_pi; Phi <= 1.1*const_pi; Phi += 0.02 * const_pi) {
       printf("\n-------------------\ndisorder / mu = %.3g, φ = %.3g π\n", disorder / mu, Phi / const_pi);
