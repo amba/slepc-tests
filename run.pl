@@ -60,6 +60,8 @@ use MyApp;
 my $cmd = '2d_no_spin';
 my $app = MyApp->new_with_options();
 
+system('make');
+
 
 # create working directory of process
 my $folder = sprintf(
@@ -77,7 +79,6 @@ copy("run.pl" , "$folder/") or die "cannot copy: $!";
 
 chdir $folder or die "Can't chdir to $folder: $!\n";
 
-system('make');
 
 # dump ARGV string
 open my $argv_fh, '>', 'ARGV.yml' or die "cannot open $!";
