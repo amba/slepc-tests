@@ -77,6 +77,7 @@ copy("run.pl" , "$folder/") or die "cannot copy: $!";
 
 chdir $folder or die "Can't chdir to $folder: $!\n";
 
+system('make');
 
 # dump ARGV string
 open my $argv_fh, '>', 'ARGV.yml' or die "cannot open $!";

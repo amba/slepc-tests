@@ -266,7 +266,7 @@ int main(int argc,char **argv)
   */
   PetscCall(EPSGetST(eps,&st));
   PetscCall(STSetType(st,STSINVERT));
-  int ncv = 1.5 * N_evs;
+  int ncv = 1.5 * N_evs + 20;
   printf("requested eigenvalues: %d, subspace dimension: %d\n", N_evs, ncv);
   PetscCall(EPSSetDimensions(eps, N_evs, ncv, PETSC_DECIDE));
   PetscCall(EPSSetTarget(eps, 0));
