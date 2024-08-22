@@ -169,7 +169,7 @@ int main(int argc,char **argv)
 
   PetscReal mu = 10; // chemical potential (meV)
   PetscReal disorder_potential = 2; // relative to chemical potential mu
- 
+  PetscInt disorder_points = 20;
 
 
   //  N_sites_leads = 400;
@@ -180,6 +180,7 @@ int main(int argc,char **argv)
 
   
   PetscCall(PetscOptionsGetReal(NULL,NULL,"-dis", &disorder_potential,NULL));
+  PetscCall(PetscOptionsGetInt(NULL,NULL,"-dis_points", &disorder_points,NULL));
   PetscCall(PetscOptionsGetInt(NULL,NULL,"-leadlength",&N_sites_leads,NULL));
   PetscCall(PetscOptionsGetInt(NULL,NULL,"-JJlength",&N_sites_JJ,NULL));
   PetscCall(PetscOptionsGetInt(NULL,NULL,"-JJwidth",&N_sites_y,NULL));
@@ -223,7 +224,8 @@ int main(int argc,char **argv)
   PetscInt N_evs = 2 * N_sites_y;
   PetscInt       i,its,nconv;
   FILE *file = fopen("output.dat", "w");
-
+  setvbuf(file, NULL, _IONBF, 0); // always flush output data
+  
   /* /\* create output directory *\/ */
   /* time_t t = time(NULL); */
   /* struct tm tm = *localtime(&t); */
@@ -279,9 +281,10 @@ int main(int argc,char **argv)
      Solve the eigensystem
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   PetscCall(PetscFPrintf(PETSC_COMM_WORLD, file, "# disorder/μ phi/π evs ...\n"));
-  for (double disorder = 0; disorder < 1.0001 * disorder_potential; disorder += disorder_potential / 10) {
+  double disorder_step = disorder_potential / (disorder_points - 1);
+  for (double disorder = 0; disorder < 1.0001 * disorder_potential; disorder += disorder_step) {
     set_normal_hamiltonian(sc_gap, t_hopping, mu, disorder);
-    for (double Phi = -0.1*const_pi; Phi <= 1.1*const_pi; Phi += 0.02 * const_pi) {
+    for (double Phi = -1*const_pi; Phi <= 1.00001*const_pi; Phi += 0.02 * const_pi) {
       printf("\n-------------------\ndisorder / mu = %.3g, φ = %.3g π\n", disorder / mu, Phi / const_pi);
 
       struct timespec  t_start, t_end;

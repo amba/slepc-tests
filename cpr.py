@@ -79,12 +79,11 @@ for block in data:
     I_vals = np.gradient(F_vals)
     #p0 = [0.8, np.amax(I_vals)]
     p0 = [np.amax(I_vals),]
-    istart = np.argmin(phi_vals < 0)
-    iend = np.argmin(phi_vals[istart+1:] < 1)
-    fit = curve_fit(cpr_KO1, phi_vals[istart:istart+iend], I_vals[istart:istart+iend], p0 = p0)
-    
+    #istart = np.argmin(phi_vals < 0)
+    #iend = np.argmin(phi_vals[istart+1:] < 1)
+    fit = curve_fit(cpr_KO1, phi_vals+0.0001, I_vals, p0 = p0)
+    fit_tau = curve_fit(cpr, phi_vals, I_vals, p0=[0.9, np.amax(I_vals)])
     print(fit)
-    tau = fit[0][0]
     
     #    plt.plot(phi_vals / np.pi, ev_vals)
     #    plt.grid()
@@ -92,8 +91,9 @@ for block in data:
     #plt.plot(phi_vals / np.pi, F_vals, '.', label="disorder = %g" % k_y)
     I_vals = np.gradient(F_vals)
    # I_vals /= np.amax(I_vals)
-    plt.plot(phi_vals, I_vals, label="disorder = %g" % (k_y,))
-    plt.plot(phi_vals, cpr_KO1(phi_vals, *fit[0]), label="tau = %g" % tau)
+    plt.plot(phi_vals, I_vals, '.', label="disorder = %g" % (k_y,))
+    plt.plot(phi_vals, cpr_KO1(phi_vals+0.0001, *fit[0]), label="KO1-fit")
+    plt.plot(phi_vals, cpr(phi_vals, *fit_tau[0]), label="tau = %g" % fit_tau[0][0])
 
 plt.xlabel('phi / π')
 plt.ylabel('I (a.u.)')

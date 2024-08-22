@@ -44,21 +44,31 @@ def save_3d_file(output_file, data, header):
 
 
 
-data, header = open_3d_file("output-spin.dat")
+data, header = open_3d_file("output.dat")
 
-phi_vals = data[0][:,1]
-N_phi = phi_vals.size
+#num_evs = data.shape[2] - 2
+#print("num_evs = ", num_evs)
+# cpr for each ky
+# ky_vals = data[:,0,0]
+# phi_vals = data[0,:,1]
+# N_phi = phi_vals.size
 
 for block in data:
+    F_vals = []
+    phi_vals = block[:,1]
+    disorder = block[0,0]
+    num_evs = block.shape[1] - 2
     ev_vals = []
     for line in block:
         all_evs = np.sort(line[2:])
-        evs = all_evs[int(num_evs/2):]
-        ev_vals.append(all_evs)
-    plt.plot(phi_vals/np.pi, ev_vals)
-plt.xlabel('phi / π')
-plt.ylabel('E / Δ)')
-plt.legend()
-plt.grid()
-plt.show()
+        i_start = np.argmax(all_evs > 0)
+        print("i_start = ", i_start, " first ev = ", all_evs[i_start])
+        
+        evs = all_evs[i_start:i_start + int(num_evs/2) - 2]
+        ev_vals.append(evs)
+    plt.plot(phi_vals, ev_vals,color='black')
+    plt.title("disorder / μ= %g" % disorder)
+    plt.grid()
+    plt.show()
+
 

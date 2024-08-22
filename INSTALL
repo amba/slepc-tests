@@ -30,4 +30,4 @@ include ${SLEPC_DIR}/lib/slepc/conf/slepc_common
 
 
 To use the perl wrapper script 'run.pl'
-install libmoosex-app-perl (on Debian based distros).
+install libmoosex-getopt-perl (on Debian based distros).
