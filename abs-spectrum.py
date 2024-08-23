@@ -64,11 +64,12 @@ for block in data:
         i_start = np.argmax(all_evs > 0)
         print("i_start = ", i_start, " first ev = ", all_evs[i_start])
         
-        evs = all_evs[i_start:i_start + int(num_evs/2) - 2]
+        evs = all_evs[i_start:i_start + int(num_evs/2)]
         ev_vals.append(evs)
     plt.plot(phi_vals, ev_vals,color='black')
     plt.title("disorder / μ= %g" % disorder)
     plt.grid()
+#    plt.ylim((0,2))
     plt.show()
 
 

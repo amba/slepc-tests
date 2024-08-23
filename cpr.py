@@ -59,6 +59,7 @@ def cpr(phi, tau, I0):
     
 def cpr_KO1(phi, I0):
     return I0 * np.cos(phi*np.pi/2) * np.arctanh(np.sin(phi * np.pi/2))
+output_data = []
 
 for block in data:
     F_vals = []
@@ -77,27 +78,33 @@ for block in data:
     #plt.plot(phi_vals, F_vals, label="k_y = %g" % k_y)
     #plt.show()
     I_vals = np.gradient(F_vals)
+    data_block = np.array([np.ones_like(phi_vals)*k_y, phi_vals, I_vals]).T
+    print("data block: ", data_block)
+    output_data.append(data_block)
     #p0 = [0.8, np.amax(I_vals)]
     p0 = [np.amax(I_vals),]
     #istart = np.argmin(phi_vals < 0)
     #iend = np.argmin(phi_vals[istart+1:] < 1)
-    fit = curve_fit(cpr_KO1, phi_vals+0.0001, I_vals, p0 = p0)
-    fit_tau = curve_fit(cpr, phi_vals, I_vals, p0=[0.9, np.amax(I_vals)])
-    print(fit)
+    # fit = curve_fit(cpr_KO1, phi_vals+0.0001, I_vals, p0 = p0)
+    # fit_tau = curve_fit(cpr, phi_vals, I_vals, p0=[0.9, np.amax(I_vals)])
+    # print(fit)
     
     #    plt.plot(phi_vals / np.pi, ev_vals)
     #    plt.grid()
     #    plt.show()
     #plt.plot(phi_vals / np.pi, F_vals, '.', label="disorder = %g" % k_y)
-    I_vals = np.gradient(F_vals)
+    #I_vals = np.gradient(F_vals)
    # I_vals /= np.amax(I_vals)
-    plt.plot(phi_vals, I_vals, '.', label="disorder = %g" % (k_y,))
-    plt.plot(phi_vals, cpr_KO1(phi_vals+0.0001, *fit[0]), label="KO1-fit")
-    plt.plot(phi_vals, cpr(phi_vals, *fit_tau[0]), label="tau = %g" % fit_tau[0][0])
-
-plt.xlabel('phi / π')
-plt.ylabel('I (a.u.)')
-plt.legend()
-plt.grid()
-plt.show()
+    #plt.plot(phi_vals, I_vals, '.', label="disorder = %g" % (k_y,))
+    #plt.plot(phi_vals, cpr_KO1(phi_vals+0.0001, *fit[0]), label="KO1-fit")
+    #plt.plot(phi_vals, cpr(phi_vals, *fit_tau[0]), label="tau = %g" % fit_tau[0][0])
+print("data: ", output_data)
+output_data = np.array(output_data)
+print(output_data.shape)
+save_3d_file('cpr.dat', output_data, "#disorder phi/pi I")
+# plt.xlabel('phi / π')
+# plt.ylabel('I (a.u.)')
+# plt.legend()
+# plt.grid()
+# plt.show()
 
