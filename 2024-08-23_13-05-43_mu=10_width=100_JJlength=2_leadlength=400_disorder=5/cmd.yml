@@ -1,0 +1,12 @@
+---
+- ../2d_no_spin
+- -mu
+- 10
+- -JJlength
+- 2
+- -leadlength
+- 400
+- -JJwidth
+- 100
+- -dis
+- '5'
