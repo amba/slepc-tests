@@ -68,7 +68,7 @@ for block in data:
     for line in block:
         all_evs = np.sort(line[2:])
         i_start = np.argmax(all_evs > 0)
-        print("i_start = ", i_start, " first ev = ", all_evs[i_start])
+  #      print("i_start = ", i_start, " first ev = ", all_evs[i_start])
         
         evs = all_evs[i_start:i_start + int(num_evs/2) - 2]
         ev_vals.append(evs)
@@ -78,8 +78,12 @@ for block in data:
     #plt.plot(phi_vals, F_vals, label="k_y = %g" % k_y)
     #plt.show()
     I_vals = np.gradient(F_vals)
+    Icp = np.amax(I_vals)
+    Icm = np.amin(I_vals)
+    eta = (Icp + Icm) / (Icp - Icm)
+    print("disorder = %g, eta = %g" % (k_y, eta))
     data_block = np.array([np.ones_like(phi_vals)*k_y, phi_vals, I_vals]).T
-    print("data block: ", data_block)
+    #print("data block: ", data_block)
     output_data.append(data_block)
     #p0 = [0.8, np.amax(I_vals)]
     p0 = [np.amax(I_vals),]
@@ -98,7 +102,7 @@ for block in data:
     plt.plot(phi_vals, I_vals, label="disorder = %g" % (k_y,))
     #plt.plot(phi_vals, cpr_KO1(phi_vals+0.0001, *fit[0]), label="KO1-fit")
     #plt.plot(phi_vals, cpr(phi_vals, *fit_tau[0]), label="tau = %g" % fit_tau[0][0])
-print("data: ", output_data)
+# print("data: ", output_data)
 output_data = np.array(output_data)
 print(output_data.shape)
 save_3d_file('cpr.dat', output_data, "#disorder phi/pi I")

@@ -337,37 +337,17 @@ int main(int argc,char **argv)
   EPS            eps;         /* eigenproblem solver context */
   ST             st;          /* spectral transformation context */
   PetscScalar    kr,ki;
-  PetscInt N_evs = 4 * N_sites_y;
+  PetscInt N_evs = 6 * N_sites_y;
   PetscInt       i,its,nconv;
   FILE *file = fopen("output.dat", "w");
   setvbuf(file, NULL, _IONBF, 0); // always flush output data
   
-  /* /\* create output directory *\/ */
-  /* time_t t = time(NULL); */
-  /* struct tm tm = *localtime(&t); */
-  /* snprintf(output_dir, sizeof(output_dir), "%d-%02d-%02d_%02d-%02d-%02d_mu=%.2gmeV_N-sites-JJ=%d_N-sites-y=%d_N-sites-x=%d_max-disorder=%g(mu)", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, mu / const_e * 1e3, N_sites_JJ, N_sites_y, N_sites_x, disorder_potential/mu); */
-  /* mkdir(output_dir, 0777); */
-
-  /* snprintf(output_file, sizeof(output_file), "%s/output.dat", output_dir); */
-  /* printf("output file: %s\n", output_file); */
-  /* file = fopen(output_file, "w"); */
   
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Compute the operator matrix that defines the eigensystem, H_{BdG}Φ = EΦ
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
  
-  allocate_matrix();
-  CHKMEMQ;
-  /* set_normal_hamiltonian(sc_gap, t_hopping, mu, disorder_potential); */
-  /* float Phi = const_pi; */
-  /* set_pairing(Phi); */
-  PetscCall(MatAssemblyBegin(H,MAT_FINAL_ASSEMBLY));
-  PetscCall(MatAssemblyEnd(H,MAT_FINAL_ASSEMBLY));
-  CHKMEMQ;
-  //PetscCall(PetscViewerPushFormat(PETSC_VIEWER_STDOUT_SELF, PETSC_VIEWER_ASCII_DENSE)) ;
-  /* PetscCall(MatView(H,  PETSC_VIEWER_DRAW_WORLD)); */
-  /* PetscCall(MatView(H, PETSC_VIEWER_STDOUT_WORLD)); */
-  /* exit(1); */
+
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Create the eigensolver and set various options
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
@@ -401,6 +381,10 @@ int main(int argc,char **argv)
      Solve the eigensystem
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   PetscCall(PetscFPrintf(PETSC_COMM_WORLD, file, "# disorder/μ phi/π evs ...\n"));
+  allocate_matrix();
+  CHKMEMQ;
+
+  
   double disorder_step = disorder_potential / (disorder_points - 1);
   for (double disorder = 0; disorder < 1.0001 * disorder_potential; disorder += disorder_step) {
     set_normal_hamiltonian(sc_gap, t_hopping, mu, disorder);
@@ -419,7 +403,7 @@ int main(int argc,char **argv)
     
       PetscCall(MatAssemblyBegin(H,MAT_FINAL_ASSEMBLY));
       PetscCall(MatAssemblyEnd(H,MAT_FINAL_ASSEMBLY));
-      //      PetscCall(MatView(H, PETSC_VIEWER_STDOUT_SELF));
+      //PetscCall(MatView(H, PETSC_VIEWER_STDOUT_SELF));
       //exit(1);
       PetscCall(EPSSetOperators(eps,H,NULL));
       PetscCall(EPSSolve(eps));
