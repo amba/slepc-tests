@@ -393,7 +393,7 @@ int main(int argc,char **argv)
     CHKMEMQ;
     set_rasbha(alpha, sc_gap, spacing);
     
-    for (double Phi = -1.04*const_pi; Phi <= 1.041*const_pi; Phi += 0.02 * const_pi) {
+    for (double Phi = -1.04*const_pi; Phi <= 1.041*const_pi; Phi += 0.01 * const_pi) {
       printf("\n-------------------\ndisorder / mu = %.3g, φ = %.3g π\n", disorder / mu, Phi / const_pi);
 
       struct timespec  t_start, t_end;
