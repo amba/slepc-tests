@@ -279,21 +279,12 @@ int main(int argc,char **argv)
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n1-D Josephson junction with spin\n"));
 
   PetscReal mu = 10; // chemical potential (meV)
-  PetscReal disorder_potential = 2; // relative to chemical potential mu
-  PetscInt disorder_points = 20;
+  PetscReal disorder_potential = 0; // relative to chemical potential mu
   PetscReal EZX = 0;
   PetscReal EZY = 0;
   PetscReal alpha = 0; // (meV nm)
 
-  //  N_sites_leads = 400;
-  //  N_sites_leads = 10*xi_0 / spacing;
-  //N_sites_JJ = 10; // JJ_length / spacing;
-  //N_sites_y = 100;
-
-
-  
   PetscCall(PetscOptionsGetReal(NULL,NULL,"-dis", &disorder_potential,NULL));
-  PetscCall(PetscOptionsGetInt(NULL,NULL,"-dis_points", &disorder_points,NULL));
   PetscCall(PetscOptionsGetInt(NULL,NULL,"-leadlength",&N_sites_leads,NULL));
   PetscCall(PetscOptionsGetInt(NULL,NULL,"-JJlength",&N_sites_JJ,NULL));
   PetscCall(PetscOptionsGetInt(NULL,NULL,"-JJwidth",&N_sites_y,NULL));
@@ -317,10 +308,6 @@ int main(int argc,char **argv)
   // need to convert to double, as hbar**2 is zero in single precision math
   double t_hopping = ((double) const_hbar)*const_hbar / (2 * m_eff * spacing*spacing);
 
-
-  
-  //PetscCall(PetscOptionsGetInt(NULL, NULL,"-Nevs", &N_evs, NULL));
-  
   disorder_potential *= mu;
   N_sites_x = 2*N_sites_leads + N_sites_JJ;
 
@@ -339,7 +326,7 @@ int main(int argc,char **argv)
   PetscScalar    kr,ki;
   PetscInt N_evs = 6 * N_sites_y;
   PetscInt       i,its,nconv;
-  FILE *file = fopen("output.dat", "w");
+  FILE *file = fopen("output.dat", "a"); // append to file, if it already exists
   setvbuf(file, NULL, _IONBF, 0); // always flush output data
   
   
@@ -380,56 +367,50 @@ int main(int argc,char **argv)
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Solve the eigensystem
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  PetscCall(PetscFPrintf(PETSC_COMM_WORLD, file, "# disorder/μ phi/π evs ...\n"));
+  PetscCall(PetscFPrintf(PETSC_COMM_WORLD, file, "# phi/π evs ...\n"));
   allocate_matrix();
   CHKMEMQ;
 
-  
-  double disorder_step = disorder_potential / (disorder_points - 1);
-  for (double disorder = 0; disorder < 1.0001 * disorder_potential; disorder += disorder_step) {
-    set_normal_hamiltonian(sc_gap, t_hopping, mu, disorder);
-    CHKMEMQ;
-    set_zeeman(EZX, EZY);
-    CHKMEMQ;
-    set_rasbha(alpha, sc_gap, spacing);
+  set_normal_hamiltonian(sc_gap, t_hopping, mu, disorder);
+  CHKMEMQ;
+  set_zeeman(EZX, EZY);
+  CHKMEMQ;
+  set_rasbha(alpha, sc_gap, spacing);
     
-    for (double Phi = -1.04*const_pi; Phi <= 1.041*const_pi; Phi += 0.01 * const_pi) {
-      printf("\n-------------------\ndisorder / mu = %.3g, φ = %.3g π\n", disorder / mu, Phi / const_pi);
+  for (double Phi = -1.04*const_pi; Phi <= 1.041*const_pi; Phi += 0.01 * const_pi) {
+    printf("\n-------------------\ndisorder / mu = %.3g, φ = %.3g π\n", disorder / mu, Phi / const_pi);
 
-      struct timespec  t_start, t_end;
-      clock_gettime(CLOCK_REALTIME, &t_start);
-      set_pairing(Phi);
+    struct timespec  t_start, t_end;
+    clock_gettime(CLOCK_REALTIME, &t_start);
+    set_pairing(Phi);
       
     
-      PetscCall(MatAssemblyBegin(H,MAT_FINAL_ASSEMBLY));
-      PetscCall(MatAssemblyEnd(H,MAT_FINAL_ASSEMBLY));
-      //PetscCall(MatView(H, PETSC_VIEWER_STDOUT_SELF));
-      //exit(1);
-      PetscCall(EPSSetOperators(eps,H,NULL));
-      PetscCall(EPSSolve(eps));
-      clock_gettime(CLOCK_REALTIME, &t_end);
-      float duration = t_end.tv_sec - t_start.tv_sec + 1e-9 * (t_end.tv_nsec - t_start.tv_nsec);
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Duration for EPSSolve: %g s\n\n" ,duration));
-      /*
-        Optional: Get some information from the solver and display it
-      */
-      PetscCall(EPSGetIterationNumber(eps,&its));
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD," Number of iterations of the method: %" PetscInt_FMT "\n",its));
+    PetscCall(MatAssemblyBegin(H,MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(H,MAT_FINAL_ASSEMBLY));
+    //PetscCall(MatView(H, PETSC_VIEWER_STDOUT_SELF));
+    //exit(1);
+    PetscCall(EPSSetOperators(eps,H,NULL));
+    PetscCall(EPSSolve(eps));
+    clock_gettime(CLOCK_REALTIME, &t_end);
+    float duration = t_end.tv_sec - t_start.tv_sec + 1e-9 * (t_end.tv_nsec - t_start.tv_nsec);
+    printf("Duration for EPSSolve: %g s\n\n" ,duration);
+
+    PetscCall(EPSGetIterationNumber(eps,&its));
+    printf(" Number of iterations of the method: %" PetscInt_FMT "\n",its);
       
-      PetscCall(EPSGetConverged(eps,&nconv));
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD," Number of converged eigenpairs: %" PetscInt_FMT "\n\n",nconv));
+    PetscCall(EPSGetConverged(eps,&nconv));
+    printf(" Number of converged eigenpairs: %" PetscInt_FMT "\n\n",nconv);
 
-      PetscCheck(nconv >= N_evs, PETSC_COMM_WORLD, 1, "did not converge");
-      PetscCall(PetscFPrintf(PETSC_COMM_WORLD, file, "%.5g\t%.5g\t", disorder / mu, Phi / const_pi));
+    PetscCheck(nconv >= N_evs, PETSC_COMM_WORLD, 1, "did not converge");
+    PetscCall(PetscFPrintf(PETSC_COMM_WORLD, file, "%.10g\t", Phi / const_pi));
 
-      for (i = 0; i < N_evs; ++i) {
-        PetscCall(EPSGetEigenvalue(eps, i, &kr, &ki));
-        // printf("ev = %.3g\n", (double) kr);
-        PetscCall(PetscFPrintf(PETSC_COMM_WORLD, file, "%.5g\t", (double ) kr));
-      }
-      PetscCall(PetscFPrintf(PETSC_COMM_WORLD, file, "\n"));
+    for (i = 0; i < N_evs; ++i) {
+      PetscCall(EPSGetEigenvalue(eps, i, &kr, &ki));
+      PetscCall(PetscFPrintf(PETSC_COMM_WORLD, file, "%.10g\t", (double ) kr));
     }
     PetscCall(PetscFPrintf(PETSC_COMM_WORLD, file, "\n"));
   }
+  PetscCall(PetscFPrintf(PETSC_COMM_WORLD, file, "\n"));
+  
   return 0;
 }

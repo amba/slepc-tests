@@ -96,11 +96,11 @@ for block in data:
     #    plt.plot(phi_vals / np.pi, ev_vals)
     #    plt.grid()
     #    plt.show()
-    plt.plot(phi_vals, F_vals, '.', label="disorder = %g" % k_y)
+    #    plt.plot(phi_vals, F_vals, '.', label="disorder = %g" % k_y)
     #I_vals = np.gradient(F_vals)
     # I_vals /= np.amax(I_vals)
     
-    #plt.plot(phi_vals, I_vals, '.', label="disorder = %g" % (k_y,))
+    plt.plot(phi_vals, I_vals, '.', label="disorder = %g" % (k_y,))
     #plt.plot(phi_vals, cpr_KO1(phi_vals+0.0001, *fit[0]), label="KO1-fit")
     #plt.plot(phi_vals, cpr(phi_vals, *fit_tau[0]), label="tau = %g" % fit_tau[0][0])
 # print("data: ", output_data)
