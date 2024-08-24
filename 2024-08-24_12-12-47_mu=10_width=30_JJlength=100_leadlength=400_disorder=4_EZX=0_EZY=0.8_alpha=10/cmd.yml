@@ -1,0 +1,18 @@
+---
+- ../2d_spin
+- -mu
+- 10
+- -JJlength
+- 100
+- -leadlength
+- 400
+- -JJwidth
+- 30
+- -dis
+- 4
+- -EZX
+- 0
+- -EZY
+- '0.8'
+- -alpha
+- '10'
