@@ -53,12 +53,26 @@ static int allocate_matrix() {
 
         PetscCall(MatSetValue(H,block_start + 4*ix+1  ,block_start + 4*ix+5,0,INSERT_VALUES));
         PetscCall(MatSetValue(H,block_start + 4*ix+5  ,block_start + 4*ix+1,0,INSERT_VALUES));
+
+        // SOC
+        PetscCall(MatSetValue(H,block_start + 4*ix  ,block_start + 4*ix+5,0,INSERT_VALUES));
+        PetscCall(MatSetValue(H,block_start + 4*ix+5  ,block_start + 4*ix,0,INSERT_VALUES));
+
+        PetscCall(MatSetValue(H,block_start + 4*ix+1  ,block_start + 4*ix+4,0,INSERT_VALUES));
+        PetscCall(MatSetValue(H,block_start + 4*ix+4  ,block_start + 4*ix+1,0,INSERT_VALUES));
         //hole
         PetscCall(MatSetValue(H,block_start + 4*ix+2,block_start + 4*ix+6,0,INSERT_VALUES));
         PetscCall(MatSetValue(H,block_start + 4*ix+6,block_start + 4*ix+2,0,INSERT_VALUES));
 
         PetscCall(MatSetValue(H,block_start + 4*ix+3,block_start + 4*ix+7,0,INSERT_VALUES));
         PetscCall(MatSetValue(H,block_start + 4*ix+7,block_start + 4*ix+3,0,INSERT_VALUES));
+
+        // SOC
+        PetscCall(MatSetValue(H,block_start + 4*ix+2,block_start + 4*ix+7,0,INSERT_VALUES));
+        PetscCall(MatSetValue(H,block_start + 4*ix+7,block_start + 4*ix+2,0,INSERT_VALUES));
+
+        PetscCall(MatSetValue(H,block_start + 4*ix+3,block_start + 4*ix+6,0,INSERT_VALUES));
+        PetscCall(MatSetValue(H,block_start + 4*ix+6,block_start + 4*ix+3,0,INSERT_VALUES));
       }
     }
   }
@@ -72,12 +86,25 @@ static int allocate_matrix() {
 
       PetscCall(MatSetValue(H,4*N_sites_x*(iy+1)+4*ix,4*N_sites_x*iy+4*ix ,0,INSERT_VALUES));
       PetscCall(MatSetValue(H,4*N_sites_x*(iy+1)+4*ix+1,4*N_sites_x*iy+4*ix+1 ,0,INSERT_VALUES));
+      // electron-SOC
+      PetscCall(MatSetValue(H,4*N_sites_x*iy+4*ix,4*N_sites_x*(iy+1)+4*ix+1 ,0,INSERT_VALUES));
+      PetscCall(MatSetValue(H,4*N_sites_x*iy+4*ix+1,4*N_sites_x*(iy+1)+4*ix ,0,INSERT_VALUES));
+
+      PetscCall(MatSetValue(H,4*N_sites_x*(iy+1)+4*ix+1,4*N_sites_x*iy+4*ix ,0,INSERT_VALUES));
+      PetscCall(MatSetValue(H,4*N_sites_x*(iy+1)+4*ix,4*N_sites_x*iy+4*ix+1 ,0,INSERT_VALUES));
       //hole
       PetscCall(MatSetValue(H,4*N_sites_x*iy+4*ix+2,4*N_sites_x*(iy+1)+4*ix+2 ,0,INSERT_VALUES));
       PetscCall(MatSetValue(H,4*N_sites_x*iy+4*ix+3,4*N_sites_x*(iy+1)+4*ix+3 ,0,INSERT_VALUES));
 
       PetscCall(MatSetValue(H,4*N_sites_x*(iy+1)+4*ix+2,4*N_sites_x*iy+4*ix+2,0,INSERT_VALUES));
       PetscCall(MatSetValue(H,4*N_sites_x*(iy+1)+4*ix+3,4*N_sites_x*iy+4*ix+3 ,0,INSERT_VALUES));
+
+      //hole-SOC
+      PetscCall(MatSetValue(H,4*N_sites_x*iy+4*ix+2,4*N_sites_x*(iy+1)+4*ix+3 ,0,INSERT_VALUES));
+      PetscCall(MatSetValue(H,4*N_sites_x*iy+4*ix+3,4*N_sites_x*(iy+1)+4*ix+2 ,0,INSERT_VALUES));
+
+      PetscCall(MatSetValue(H,4*N_sites_x*(iy+1)+4*ix+3,4*N_sites_x*iy+4*ix+2,0,INSERT_VALUES));
+      PetscCall(MatSetValue(H,4*N_sites_x*(iy+1)+4*ix+2,4*N_sites_x*iy+4*ix+3 ,0,INSERT_VALUES));
 
     }
   }
@@ -198,6 +225,48 @@ static int set_zeeman(PetscReal EZX, PetscReal EZY) {
   return 0;
 }
 
+
+static int set_rasbha(PetscReal alpha, PetscReal sc_gap,  PetscReal spacing) {
+  PetscReal soc_term = alpha / (2*spacing * sc_gap);
+  printf("soc_term = %g\n", soc_term);
+  for (int iy = 0; iy < N_sites_y; ++iy) {
+    PetscInt block_start = 4 * N_sites_x * iy;
+    for (int ix=0; ix < N_sites_x-1; ++ix) {
+      // electron-SOC
+      PetscCall(MatSetValue(H,block_start + 4*ix  ,block_start + 4*ix+5,soc_term,INSERT_VALUES));
+      PetscCall(MatSetValue(H,block_start + 4*ix+5  ,block_start + 4*ix,soc_term,INSERT_VALUES));
+
+      PetscCall(MatSetValue(H,block_start + 4*ix+1  ,block_start + 4*ix+4,-soc_term,INSERT_VALUES));
+      PetscCall(MatSetValue(H,block_start + 4*ix+4  ,block_start + 4*ix+1,-soc_term,INSERT_VALUES));
+
+      // hole-SOC
+      PetscCall(MatSetValue(H,block_start + 4*ix+2,block_start + 4*ix+7,-soc_term,INSERT_VALUES));
+      PetscCall(MatSetValue(H,block_start + 4*ix+7,block_start + 4*ix+2,-soc_term,INSERT_VALUES));
+
+      PetscCall(MatSetValue(H,block_start + 4*ix+3,block_start + 4*ix+6,soc_term,INSERT_VALUES));
+      PetscCall(MatSetValue(H,block_start + 4*ix+6,block_start + 4*ix+3,soc_term,INSERT_VALUES));
+    }
+  }
+
+  // Fill diagonal blocks (hoppings in y-direction)
+  for (PetscInt iy = 0; iy < N_sites_y-1; ++iy) {
+    for (PetscInt ix=0; ix < N_sites_x; ++ix) {
+       // electron-SOC
+      PetscCall(MatSetValue(H,4*N_sites_x*iy+4*ix,4*N_sites_x*(iy+1)+4*ix+1 ,-PETSC_i*soc_term,INSERT_VALUES));
+      PetscCall(MatSetValue(H,4*N_sites_x*iy+4*ix+1,4*N_sites_x*(iy+1)+4*ix ,-PETSC_i*soc_term,INSERT_VALUES));
+
+      PetscCall(MatSetValue(H,4*N_sites_x*(iy+1)+4*ix+1,4*N_sites_x*iy+4*ix ,PETSC_i*soc_term,INSERT_VALUES));
+      PetscCall(MatSetValue(H,4*N_sites_x*(iy+1)+4*ix,4*N_sites_x*iy+4*ix+1 ,PETSC_i*soc_term,INSERT_VALUES));
+      //hole-SOC
+      PetscCall(MatSetValue(H,4*N_sites_x*iy+4*ix+2,4*N_sites_x*(iy+1)+4*ix+3 ,PETSC_i*soc_term,INSERT_VALUES));
+      PetscCall(MatSetValue(H,4*N_sites_x*iy+4*ix+3,4*N_sites_x*(iy+1)+4*ix+2 ,PETSC_i*soc_term,INSERT_VALUES));
+
+      PetscCall(MatSetValue(H,4*N_sites_x*(iy+1)+4*ix+3,4*N_sites_x*iy+4*ix+2,-PETSC_i*soc_term,INSERT_VALUES));
+      PetscCall(MatSetValue(H,4*N_sites_x*(iy+1)+4*ix+2,4*N_sites_x*iy+4*ix+3 ,-PETSC_i*soc_term,INSERT_VALUES));
+    }
+  }
+  return 0;
+}
 int main(int argc,char **argv)
 {
 
@@ -214,7 +283,7 @@ int main(int argc,char **argv)
   PetscInt disorder_points = 20;
   PetscReal EZX = 0;
   PetscReal EZY = 0;
-  
+  PetscReal alpha = 0; // (meV nm)
 
   //  N_sites_leads = 400;
   //  N_sites_leads = 10*xi_0 / spacing;
@@ -231,12 +300,13 @@ int main(int argc,char **argv)
   PetscCall(PetscOptionsGetReal(NULL,NULL,"-mu",&mu,NULL));
   PetscCall(PetscOptionsGetReal(NULL,NULL,"-EZX",&EZX,NULL));
   PetscCall(PetscOptionsGetReal(NULL,NULL,"-EZY",&EZY,NULL));
-
+  PetscCall(PetscOptionsGetReal(NULL,NULL,"-alpha",&alpha,NULL));
 
 
   
   mu *= 1e-3 * const_e;
-
+  alpha *= 1e-3 * const_e * 1e-9;
+  
   double m_eff = 0.036 * const_m_e;
   double sc_gap = 100e-6*const_e;
   double k_F = sqrt(2 * m_eff * mu) / const_hbar;
@@ -287,13 +357,17 @@ int main(int argc,char **argv)
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
  
   allocate_matrix();
+  CHKMEMQ;
   /* set_normal_hamiltonian(sc_gap, t_hopping, mu, disorder_potential); */
   /* float Phi = const_pi; */
   /* set_pairing(Phi); */
   PetscCall(MatAssemblyBegin(H,MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(H,MAT_FINAL_ASSEMBLY));
-  //  PetscCall(PetscViewerPushFormat(PETSC_VIEWER_STDOUT_SELF, PETSC_VIEWER_ASCII_DENSE)) ;
-  PetscCall(MatView(H,  PETSC_VIEWER_DRAW_WORLD));
+  CHKMEMQ;
+  //PetscCall(PetscViewerPushFormat(PETSC_VIEWER_STDOUT_SELF, PETSC_VIEWER_ASCII_DENSE)) ;
+  /* PetscCall(MatView(H,  PETSC_VIEWER_DRAW_WORLD)); */
+  /* PetscCall(MatView(H, PETSC_VIEWER_STDOUT_WORLD)); */
+  /* exit(1); */
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Create the eigensolver and set various options
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
@@ -330,8 +404,12 @@ int main(int argc,char **argv)
   double disorder_step = disorder_potential / (disorder_points - 1);
   for (double disorder = 0; disorder < 1.0001 * disorder_potential; disorder += disorder_step) {
     set_normal_hamiltonian(sc_gap, t_hopping, mu, disorder);
+    CHKMEMQ;
     set_zeeman(EZX, EZY);
-    for (double Phi = -1*const_pi; Phi <= 1.00001*const_pi; Phi += 0.02 * const_pi) {
+    CHKMEMQ;
+    set_rasbha(alpha, sc_gap, spacing);
+    
+    for (double Phi = -1.04*const_pi; Phi <= 1.041*const_pi; Phi += 0.02 * const_pi) {
       printf("\n-------------------\ndisorder / mu = %.3g, φ = %.3g π\n", disorder / mu, Phi / const_pi);
 
       struct timespec  t_start, t_end;
@@ -342,7 +420,7 @@ int main(int argc,char **argv)
       PetscCall(MatAssemblyBegin(H,MAT_FINAL_ASSEMBLY));
       PetscCall(MatAssemblyEnd(H,MAT_FINAL_ASSEMBLY));
       //      PetscCall(MatView(H, PETSC_VIEWER_STDOUT_SELF));
-      // exit(1);
+      //exit(1);
       PetscCall(EPSSetOperators(eps,H,NULL));
       PetscCall(EPSSolve(eps));
       clock_gettime(CLOCK_REALTIME, &t_end);

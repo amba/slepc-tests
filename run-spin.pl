@@ -67,6 +67,12 @@ has 'EZY' => (
     default => 0,
     );
 
+has 'alpha' => (
+    is => 'rw',
+    isa => 'Num',
+    documentation => 'Rashba SOC (in meV nm)',
+    default => 0,
+    );
 
 
 
@@ -79,9 +85,9 @@ system('make');
 
 # create working directory of process
 my $folder = sprintf(
-    "mu=%g_width=%d_JJlength=%d_leadlength=%d_disorder=%g",
+    "mu=%g_width=%d_JJlength=%d_leadlength=%d_disorder=%g_EZX=%g_EZY=%g_alpha=%g",
     $app->mu, $app->width, $app->JJ_length, $app->lead_length,
-    $app->disorder
+    $app->disorder, $app->EZX, $app->EZY, $app->alpha,
     );
 
 $folder = strftime( '%H-%M-%S', localtime() ) . "_$folder";
@@ -98,7 +104,7 @@ chdir $folder or die "Can't chdir to $folder: $!\n";
 open my $argv_fh, '>', 'ARGV.yml' or die "cannot open $!";
 print {$argv_fh} Dump($app->ARGV);
 
-my @command = ("../$cmd",'-mu', $app->mu, '-JJlength', $app->JJ_length, '-leadlength', $app->lead_length, '-JJwidth', $app->width, '-dis', $app->disorder, '-EZX', $app->EZX, '-EZY', $app->EZY);
+my @command = ("../$cmd",'-mu', $app->mu, '-JJlength', $app->JJ_length, '-leadlength', $app->lead_length, '-JJwidth', $app->width, '-dis', $app->disorder, '-EZX', $app->EZX, '-EZY', $app->EZY, '-alpha', $app->alpha);
 say "running command: @command";
 
 open my $cmd_fh, '>', 'cmd.yml' or die "cannot open $!";
