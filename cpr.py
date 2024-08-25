@@ -82,7 +82,7 @@ for block in data:
     Icm = np.amin(I_vals)
     eta = (Icp + Icm) / (Icp - Icm)
     print("disorder = %g, eta = %g" % (k_y, eta))
-    data_block = np.array([np.ones_like(phi_vals)*k_y, phi_vals, I_vals]).T
+    data_block = np.array([np.ones_like(phi_vals)*k_y, phi_vals, F_vals, I_vals]).T
     #print("data block: ", data_block)
     output_data.append(data_block)
     #p0 = [0.8, np.amax(I_vals)]

@@ -278,6 +278,7 @@ int main(int argc,char **argv)
   PetscCheck(mpi_size == 1, PETSC_COMM_WORLD, PETSC_ERR_WRONG_MPI_SIZE, "This is a uniprocessor example only!");
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n1-D Josephson junction with spin\n"));
 
+  char filename[1024] = "output.dat";
   PetscReal mu = 10; // chemical potential (meV)
   PetscReal disorder_potential = 0; // relative to chemical potential mu
   PetscReal EZX = 0;
@@ -292,7 +293,7 @@ int main(int argc,char **argv)
   PetscCall(PetscOptionsGetReal(NULL,NULL,"-EZX",&EZX,NULL));
   PetscCall(PetscOptionsGetReal(NULL,NULL,"-EZY",&EZY,NULL));
   PetscCall(PetscOptionsGetReal(NULL,NULL,"-alpha",&alpha,NULL));
-
+  PetscCall(PetscOptionsGetString(NULL, NULL, "-output", filename, sizeof(filename), NULL));
 
   
   mu *= 1e-3 * const_e;
@@ -326,7 +327,7 @@ int main(int argc,char **argv)
   PetscScalar    kr,ki;
   PetscInt N_evs = 6 * N_sites_y;
   PetscInt       i,its,nconv;
-  FILE *file = fopen("output.dat", "a"); // append to file, if it already exists
+  FILE *file = fopen(filename, "a"); // append to file, if it already exists
   setvbuf(file, NULL, _IONBF, 0); // always flush output data
   
   
