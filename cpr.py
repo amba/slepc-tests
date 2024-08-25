@@ -44,8 +44,10 @@ def save_3d_file(output_file, data, header):
     fh.close()
 
 
-
-data, header = open_3d_file("output.dat")
+data_file = sys.argv[1]
+if not data_file:
+    data_file = 'output.dat'
+data, header = open_3d_file(data_file)
 
 num_evs = data.shape[2] - 2
 print("num_evs = ", num_evs)
