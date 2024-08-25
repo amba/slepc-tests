@@ -327,8 +327,9 @@ int main(int argc,char **argv)
   PetscScalar    kr,ki;
   PetscInt N_evs = 6 * N_sites_y;
   PetscInt       i,its,nconv;
-  FILE *file = fopen(filename, "a"); // append to file, if it already exists
-  setvbuf(file, NULL, _IONBF, 0); // always flush output data
+  FILE *file;
+  PetscCall(PetscFOpen(PETSC_COMM_WORLD, filename, "a", &file)); // append to file, if it already exists
+  // setvbuf(file, NULL, _IONBF, 0); // always flush output data
   
   
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -410,8 +411,10 @@ int main(int argc,char **argv)
       PetscCall(PetscFPrintf(PETSC_COMM_WORLD, file, "%.10g\t", (double ) kr));
     }
     PetscCall(PetscFPrintf(PETSC_COMM_WORLD, file, "\n"));
+    PetscCall(PetscFFlush(file));
   }
   PetscCall(PetscFPrintf(PETSC_COMM_WORLD, file, "\n"));
+  PetscCall(PetscFFlush(file));
   
   return 0;
 }
