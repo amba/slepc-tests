@@ -7,6 +7,8 @@ use POSIX qw/strftime/;
 use File::Copy 'copy';
 use YAML::XS;
 use Moose;
+use autodie qw/system/;
+
 with 'MooseX::Getopt::Dashes';
 
 has 'width' => (
@@ -87,7 +89,7 @@ system('make');
 
 # create working directory of process
 my $folder = sprintf(
-    "EZY-SWEEP_width=%d_JJlength=%d_EZY=%g_alpha=%g",
+    "Disorder-sweep_width=%d_JJlength=%d_EZY=%g_alpha=%g",
     $app->width, $app->JJ_length, $app->EZY, $app->alpha,
     );
 

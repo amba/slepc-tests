@@ -7,6 +7,8 @@ use POSIX qw/strftime/;
 use File::Copy 'copy';
 use YAML::XS;
 use Moose;
+use autodie qw/system/;
+
 with 'MooseX::Getopt::Dashes';
 
 has 'width' => (

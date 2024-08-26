@@ -54,7 +54,7 @@ eta_vals = []
 
 output_data = []
 for file in (datafiles):
-    start = file.find('EZY=') + 4
+    start = file.find('=') + 1
     end = file.find('.dat')
     EZY = float(file[start:end])
     ezy_vals.append(EZY)
