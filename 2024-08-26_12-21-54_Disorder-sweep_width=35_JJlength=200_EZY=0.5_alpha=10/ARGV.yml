@@ -1,0 +1,15 @@
+---
+- --width
+- '35'
+- --JJ-length
+- '200'
+- --lead-length
+- '400'
+- --disorder
+- '2'
+- --disorder-points
+- '21'
+- --EZY
+- '0.5'
+- --alpha
+- '10'
