@@ -89,7 +89,7 @@ for file in (datafiles):
         eta = (Icp + Icm) / (Icp - Icm)
         eta_vals.append(eta)
         print("eta = %g" % (eta,))
-        data_block = np.array([phi_vals, F_vals, I_vals]).T
+        data_block = np.array([np.ones_like(phi_vals)*EZY, phi_vals, F_vals, I_vals]).T
         #print("data block: ", data_block)
         output_data.append(data_block)
         #p0 = [0.8, np.amax(I_vals)]
@@ -121,6 +121,4 @@ plt.show()
 plt.plot(ezy_vals, eta_vals, '.')
 plt.grid()
 plt.show()
-output_data = np.array(output_data)
-print(output_data.shape)
-save_3d_file('cpr.dat', output_data, "#disorder phi/pi I")
+save_3d_file('cpr.dat', output_data, "#EZY phi/pi I")
