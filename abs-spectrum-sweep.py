@@ -53,23 +53,31 @@ data, header = open_3d_file(filename)
 # phi_vals = data[0,:,1]
 # N_phi = phi_vals.size
 
-for block in data:
-    F_vals = []
-    phi_vals = block[:,0]
-    disorder = block[0,0]
-    num_evs = block.shape[1] - 1
-    ev_vals = []
-    for line in block:
-        all_evs = np.sort(line[1:])
-        i_start = np.argmax(all_evs > 0)
-        print("i_start = ", i_start, " first ev = ", all_evs[i_start])
-        
-        evs = all_evs[i_start:i_start + int(num_evs/2)]
-        ev_vals.append(evs)
-    plt.plot(phi_vals, ev_vals,color='black')
-    plt.title(filename)
-    plt.grid()
-#    plt.ylim((0,2))
-    plt.show()
+block = data[0]
+F_vals = []
+phi_vals = block[:,0]
+disorder = block[0,0]
+num_evs = block.shape[1] - 1
+ev_vals = []
+ev_vals_hist = []
+for line in block:
+    all_evs = np.sort(line[1:])
+    i_start = np.argmax(all_evs > 0)
+    print("i_start = ", i_start, " first ev = ", all_evs[i_start])
 
+    evs = all_evs[i_start:i_start + int(num_evs/2)]
+    evs_hist,edges = np.histogram(evs, bins=201)
+    print(evs_hist)
+    ev_vals.append(evs)
+    ev_vals_hist.append(evs_hist)
+plt.plot(phi_vals, ev_vals,color='black')
+plt.title(filename)
+plt.grid()
+        #plt.ylim((0,2))
+plt.show()
+print("ev_vals: ", ev_vals_hist)
+ev_density = np.array(ev_vals_hist).swapaxes(0,1)
+print("ev_density: ", ev_density.shape)
+plt.imshow(ev_density,origin='lower', cmap='Greys')
+plt.show()
 
