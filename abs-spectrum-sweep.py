@@ -66,8 +66,7 @@ for line in block:
     print("i_start = ", i_start, " first ev = ", all_evs[i_start])
 
     evs = all_evs[i_start:i_start + int(num_evs/2)]
-    evs_hist,edges = np.histogram(evs, bins=201)
-    print(evs_hist)
+    evs_hist,edges = np.histogram(evs, bins=401)
     ev_vals.append(evs)
     ev_vals_hist.append(evs_hist)
 plt.plot(phi_vals, ev_vals,color='black')
@@ -75,9 +74,7 @@ plt.title(filename)
 plt.grid()
         #plt.ylim((0,2))
 plt.show()
-print("ev_vals: ", ev_vals_hist)
 ev_density = np.array(ev_vals_hist).swapaxes(0,1)
-print("ev_density: ", ev_density.shape)
 plt.imshow(ev_density,origin='lower', cmap='Greys')
 plt.show()
 
