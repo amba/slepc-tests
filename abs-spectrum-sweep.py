@@ -66,7 +66,7 @@ for line in block:
     print("i_start = ", i_start, " first ev = ", all_evs[i_start])
 
     evs = all_evs[i_start:i_start + int(num_evs/2)]
-    evs_hist,edges = np.histogram(evs, bins=401)
+    evs_hist,edges = np.histogram(evs, range=(0,2), bins=401)
     ev_vals.append(evs)
     ev_vals_hist.append(evs_hist)
 plt.plot(phi_vals, ev_vals,color='black')
