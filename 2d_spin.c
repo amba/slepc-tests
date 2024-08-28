@@ -278,6 +278,11 @@ int main(int argc,char **argv)
   PetscCheck(mpi_size == 1, PETSC_COMM_WORLD, PETSC_ERR_WRONG_MPI_SIZE, "This is a uniprocessor example only!");
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n1-D Josephson junction with spin\n"));
 
+  struct timespec  t_seed;
+  clock_gettime(CLOCK_REALTIME, &t_seed);
+  uint seed = (uint) t_seed.tv_nsec;
+  printf("using for random seed: %u\n", seed);
+  srand(seed);
   char filename[1024] = "output.dat";
   PetscReal mu = 10; // chemical potential (meV)
   PetscReal disorder_potential = 0; // relative to chemical potential mu

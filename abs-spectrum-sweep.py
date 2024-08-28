@@ -60,19 +60,22 @@ disorder = block[0,0]
 num_evs = block.shape[1] - 1
 ev_vals = []
 ev_vals_hist = []
+max_ev = np.amax(block[:,1:])
+print("max_ev = ", max_ev)
+
 for line in block:
     all_evs = np.sort(line[1:])
     i_start = np.argmax(all_evs > 0)
-    print("i_start = ", i_start, " first ev = ", all_evs[i_start])
+    #print("i_start = ", i_start, " first ev = ", all_evs[i_start])
 
     evs = all_evs[i_start:i_start + int(num_evs/2)]
-    evs_hist,edges = np.histogram(evs, range=(0,2), bins=401)
+    evs_hist,edges = np.histogram(evs, range=(0,max_ev+0.1), bins=401)
     ev_vals.append(evs)
     ev_vals_hist.append(evs_hist)
 plt.plot(phi_vals, ev_vals,color='black')
 plt.title(filename)
 plt.grid()
-        #plt.ylim((0,2))
+plt.ylim((0,max_ev+0.1))
 plt.show()
 ev_density = np.array(ev_vals_hist).swapaxes(0,1)
 plt.imshow(ev_density,origin='lower', cmap='Greys')
