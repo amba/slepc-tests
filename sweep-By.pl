@@ -86,6 +86,13 @@ has 'alpha' => (
     );
 
 
+has 'spectrum_range' => (
+    is => 'rw',
+    isa => 'Num',
+    documentation => 'calculate spectrum up to N_ABS_bound_states * spectrum_range',
+    default => 2,
+    );
+
 
 use MyApp;
 my $cmd = '2d_spin';
@@ -96,8 +103,8 @@ system('make');
 
 # create working directory of process
 my $folder = sprintf(
-    "EZY-SWEEP_width=%d_JJlength=%d_alpha=%g",
-    $app->width, $app->JJ_length, $app->alpha,
+    "EZY-SWEEP_width=%d_JJlength=%d_disorder=%g_alpha=%g",
+    $app->width, $app->JJ_length, $app->disorder, $app->alpha,
     );
 
 $folder = strftime( '%H-%M-%S', localtime() ) . "_$folder";
@@ -122,7 +129,7 @@ say "EZY values: @EZY_points";
 for my $ezy (@EZY_points) {
     say "ezy = $ezy";
     my $output_filename = sprintf("output_EZY=%.7g.dat", $ezy);
-    my @command = ("../$cmd",'-mu', $app->mu, '-JJlength', $app->JJ_length, '-leadlength', $app->lead_length, '-JJwidth', $app->width, '-dis', $app->disorder, '-EZX',0 , '-EZY', $ezy, '-alpha', $app->alpha, '-output', $output_filename);
+    my @command = ("../$cmd",'-mu', $app->mu, '-JJlength', $app->JJ_length, '-leadlength', $app->lead_length, '-JJwidth', $app->width, '-dis', $app->disorder, '-EZX',0 , '-EZY', $ezy, '-alpha', $app->alpha, '-spectrum', $app->spectrum_range, '-output', $output_filename);
     say "running command: @command";
     
     # open my $cmd_fh, '>', 'cmd.yml' or die "cannot open $!";

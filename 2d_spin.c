@@ -289,6 +289,7 @@ int main(int argc,char **argv)
   PetscReal EZX = 0;
   PetscReal EZY = 0;
   PetscReal alpha = 0; // (meV nm)
+  PetscReal spectrum_range = 4; // calculate spectrum up to N_ABS_bound_states * spectrum_range
 
   PetscCall(PetscOptionsGetReal(NULL,NULL,"-dis", &disorder_potential,NULL));
   PetscCall(PetscOptionsGetInt(NULL,NULL,"-leadlength",&N_sites_leads,NULL));
@@ -298,6 +299,7 @@ int main(int argc,char **argv)
   PetscCall(PetscOptionsGetReal(NULL,NULL,"-EZX",&EZX,NULL));
   PetscCall(PetscOptionsGetReal(NULL,NULL,"-EZY",&EZY,NULL));
   PetscCall(PetscOptionsGetReal(NULL,NULL,"-alpha",&alpha,NULL));
+  PetscCall(PetscOptionsGetReal(NULL,NULL,"-spectrum",&spectrum_range,NULL));
   PetscCall(PetscOptionsGetString(NULL, NULL, "-output", filename, sizeof(filename), NULL));
 
   
@@ -330,7 +332,7 @@ int main(int argc,char **argv)
   EPS            eps;         /* eigenproblem solver context */
   ST             st;          /* spectral transformation context */
   PetscScalar    kr,ki;
-  PetscInt N_evs = 6 * N_sites_y;
+  PetscInt N_evs = (int ) (2 * spectrum_range *(0.4 * N_sites_y + 4));
   PetscInt       i,its,nconv;
   FILE *file;
   PetscCall(PetscFOpen(PETSC_COMM_WORLD, filename, "a", &file)); // append to file, if it already exists
