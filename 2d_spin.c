@@ -177,19 +177,20 @@ static int set_normal_hamiltonian(PetscReal sc_gap,  PetscReal t_hopping, PetscR
   return 0;
 }
 
-static int set_pairing(PetscReal Phi) {
+static int set_pairing(PetscReal Phi, PetscReal pairing_density) {
   // need to assemble matrix after call
   // assume that H is scaled with 1/|Δ|
-
+  PetscReal factor;
   for (int iy = 0; iy < N_sites_y; ++iy) {
     PetscInt block_start = 4*N_sites_x * iy;
     // left lead
     for (int ix=0; ix < N_sites_leads; ++ix) {
-      PetscCall(MatSetValue(H,block_start + 4*ix,block_start + 4*ix+2, 1, INSERT_VALUES));
-      PetscCall(MatSetValue(H,block_start + 4*ix+2,block_start + 4*ix, 1, INSERT_VALUES));
+      factor = rand() < pairing_density * RAND_MAX ? 1 : 0;
+      PetscCall(MatSetValue(H,block_start + 4*ix,block_start + 4*ix+2, factor, INSERT_VALUES));
+      PetscCall(MatSetValue(H,block_start + 4*ix+2,block_start + 4*ix, factor, INSERT_VALUES));
         
-      PetscCall(MatSetValue(H,block_start + 4*ix+1,block_start + 4*ix+3, 1, INSERT_VALUES));
-      PetscCall(MatSetValue(H,block_start + 4*ix+3,block_start + 4*ix+1, 1, INSERT_VALUES));
+      PetscCall(MatSetValue(H,block_start + 4*ix+1,block_start + 4*ix+3, factor, INSERT_VALUES));
+      PetscCall(MatSetValue(H,block_start + 4*ix+3,block_start + 4*ix+1, factor, INSERT_VALUES));
             
       /* PetscCall(MatSetValue(H,block_start + 2*ix  ,block_start + 2*ix + 1, 1, INSERT_VALUES)); */
       /* PetscCall(MatSetValue(H,block_start + 2*ix + 1  ,block_start + 2*ix, 1, INSERT_VALUES)); */
@@ -198,11 +199,12 @@ static int set_pairing(PetscReal Phi) {
     // right lead
     PetscScalar gap = PetscExpComplex(PETSC_i * Phi);
     for (int ix =N_sites_JJ + N_sites_leads; ix < N_sites_x; ++ix) {
-      PetscCall(MatSetValue(H,block_start + 4*ix,block_start + 4*ix+2, gap, INSERT_VALUES));
-      PetscCall(MatSetValue(H,block_start + 4*ix+2,block_start + 4*ix, PetscConjComplex(gap), INSERT_VALUES));
+      factor = rand() < pairing_density * RAND_MAX ? 1 : 0;
+      PetscCall(MatSetValue(H,block_start + 4*ix,block_start + 4*ix+2, factor*gap, INSERT_VALUES));
+      PetscCall(MatSetValue(H,block_start + 4*ix+2,block_start + 4*ix, factor*PetscConjComplex(gap), INSERT_VALUES));
         
-      PetscCall(MatSetValue(H,block_start + 4*ix+1,block_start + 4*ix+3, gap, INSERT_VALUES));
-      PetscCall(MatSetValue(H,block_start + 4*ix+3,block_start + 4*ix+1, PetscConjComplex(gap), INSERT_VALUES));
+      PetscCall(MatSetValue(H,block_start + 4*ix+1,block_start + 4*ix+3, factor*gap, INSERT_VALUES));
+      PetscCall(MatSetValue(H,block_start + 4*ix+3,block_start + 4*ix+1, factor*PetscConjComplex(gap), INSERT_VALUES));
     }
   }
   return 0;
@@ -290,7 +292,7 @@ int main(int argc,char **argv)
   PetscReal EZY = 0;
   PetscReal alpha = 0; // (meV nm)
   PetscReal spectrum_range = 4; // calculate spectrum up to N_ABS_bound_states * spectrum_range
-
+  PetscReal pairing_density = 1;
   PetscCall(PetscOptionsGetReal(NULL,NULL,"-dis", &disorder_potential,NULL));
   PetscCall(PetscOptionsGetInt(NULL,NULL,"-leadlength",&N_sites_leads,NULL));
   PetscCall(PetscOptionsGetInt(NULL,NULL,"-JJlength",&N_sites_JJ,NULL));
@@ -300,6 +302,7 @@ int main(int argc,char **argv)
   PetscCall(PetscOptionsGetReal(NULL,NULL,"-EZY",&EZY,NULL));
   PetscCall(PetscOptionsGetReal(NULL,NULL,"-alpha",&alpha,NULL));
   PetscCall(PetscOptionsGetReal(NULL,NULL,"-spectrum",&spectrum_range,NULL));
+  PetscCall(PetscOptionsGetReal(NULL,NULL,"-pairing_density",&pairing_density,NULL));
   PetscCall(PetscOptionsGetString(NULL, NULL, "-output", filename, sizeof(filename), NULL));
 
   
@@ -328,7 +331,7 @@ int main(int argc,char **argv)
   printf("λ_F = %.2g\n", lambda_F);
   printf("λ_F / a = %.2g\n", lambda_F / spacing);
   printf("ξ_0 = %.2g\n", xi_0);
-  
+  printf("pairing density = %g\n", pairing_density);
   EPS            eps;         /* eigenproblem solver context */
   ST             st;          /* spectral transformation context */
   PetscScalar    kr,ki;
@@ -391,7 +394,7 @@ int main(int argc,char **argv)
 
     struct timespec  t_start, t_end;
     clock_gettime(CLOCK_REALTIME, &t_start);
-    set_pairing(Phi);
+    set_pairing(Phi, pairing_density);
       
     
     PetscCall(MatAssemblyBegin(H,MAT_FINAL_ASSEMBLY));

@@ -55,6 +55,13 @@ has 'mu' => (
     default => 10,
     );
 
+has 'pairing_density' => (
+    is => 'rw',
+    isa => 'Num',
+    documentation => 'pairing density',
+    default => 1,
+    );
+
 # has 'EZX' => (
 #     is => 'rw',
 #     isa => 'Num',
@@ -115,7 +122,7 @@ say "disorder values: @disorder_points";
 for my $disorder (@disorder_points) {
     say "disorder = $disorder";
     my $output_filename = sprintf("output_disorder=%.7g.dat", $disorder);
-    my @command = ("../$cmd",'-mu', $app->mu, '-JJlength', $app->JJ_length, '-leadlength', $app->lead_length, '-JJwidth', $app->width, '-dis', $disorder, '-EZX',0 , '-EZY', $app->EZY, '-alpha', $app->alpha, '-output', $output_filename);
+    my @command = ("../$cmd",'-mu', $app->mu, '-JJlength', $app->JJ_length, '-leadlength', $app->lead_length, '-JJwidth', $app->width, '-dis', $disorder, '-EZX',0 , '-EZY', $app->EZY, '-alpha', $app->alpha, '-pairing_density', $app->pairing_density, '-output', $output_filename);
     say "running command: @command";
     
     # open my $cmd_fh, '>', 'cmd.yml' or die "cannot open $!";

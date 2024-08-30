@@ -2,7 +2,7 @@
 #include <sys/stat.h> // for mkdir
 #include <petscmat.h>
 #include <time.h>
-static char help[] = "Bogoliuboev de-Gennes eigenvalue solver for SNS junctions with arbitrary disorder.\n\n";
+static char help[] = "Bogoliubov de-Gennes eigenvalue solver for SNS junctions with arbitrary disorder.\n\n";
 
 static PetscReal const_hbar = 1.0545718176461565e-34;
 static PetscReal const_e = 1.602176634e-19;
@@ -133,23 +133,28 @@ static int set_normal_hamiltonian(PetscReal sc_gap,  PetscReal t_hopping, PetscR
   return 0;
 }
 
-static int set_pairing(PetscReal Phi) {
+static int set_pairing(PetscReal Phi, PetscReal density) {
   // need to assemble matrix after call
   // assume that H is scaled with 1/|Δ|
 
+
+  PetscReal factor = 0;
+  // density is parameter in range [0,1]
   for (int iy = 0; iy < N_sites_y; ++iy) {
     PetscInt block_start = 2*N_sites_x * iy;
     // left lead
     for (int ix=0; ix < N_sites_leads; ++ix) {
-      PetscCall(MatSetValue(H,block_start + 2*ix  ,block_start + 2*ix + 1, 1, INSERT_VALUES));
-      PetscCall(MatSetValue(H,block_start + 2*ix + 1  ,block_start + 2*ix, 1, INSERT_VALUES));
+      factor = rand() < density * RAND_MAX ? 1 : 0;
+      PetscCall(MatSetValue(H,block_start + 2*ix  ,block_start + 2*ix + 1, factor, INSERT_VALUES));
+      PetscCall(MatSetValue(H,block_start + 2*ix + 1  ,block_start + 2*ix, factor, INSERT_VALUES));
     }
 
     // right lead
     PetscScalar gap = PetscExpComplex(PETSC_i * Phi);
     for (int ix =N_sites_JJ + N_sites_leads; ix < N_sites_x; ++ix) {
-      PetscCall(MatSetValue(H,block_start + 2*ix  ,block_start + 2*ix + 1, gap, INSERT_VALUES));
-      PetscCall(MatSetValue(H,block_start + 2*ix + 1  ,block_start + 2*ix, PetscConjComplex(gap), INSERT_VALUES));
+      factor = rand() < density * RAND_MAX ? 1 : 0;
+      PetscCall(MatSetValue(H,block_start + 2*ix  ,block_start + 2*ix + 1, factor*gap, INSERT_VALUES));
+      PetscCall(MatSetValue(H,block_start + 2*ix + 1  ,block_start + 2*ix, factor*PetscConjComplex(gap), INSERT_VALUES));
     }
   }
   return 0;
@@ -166,11 +171,17 @@ int main(int argc,char **argv)
   PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &mpi_size));
   PetscCheck(mpi_size == 1, PETSC_COMM_WORLD, PETSC_ERR_WRONG_MPI_SIZE, "This is a uniprocessor example only!");
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n1-D Josephson junction with spin\n"));
-
+  
+  struct timespec  t_seed;
+  clock_gettime(CLOCK_REALTIME, &t_seed);
+  uint seed = (uint) t_seed.tv_nsec;
+  printf("using for random seed: %u\n", seed);
+  srand(seed);
+  
   PetscReal mu = 10; // chemical potential (meV)
   PetscReal disorder_potential = 2; // relative to chemical potential mu
   PetscInt disorder_points = 20;
-
+  PetscReal pairing_density = 1;
 
   //  N_sites_leads = 400;
   //  N_sites_leads = 10*xi_0 / spacing;
@@ -185,6 +196,7 @@ int main(int argc,char **argv)
   PetscCall(PetscOptionsGetInt(NULL,NULL,"-JJlength",&N_sites_JJ,NULL));
   PetscCall(PetscOptionsGetInt(NULL,NULL,"-JJwidth",&N_sites_y,NULL));
   PetscCall(PetscOptionsGetReal(NULL,NULL,"-mu",&mu,NULL));
+  PetscCall(PetscOptionsGetReal(NULL,NULL,"-density",&pairing_density,NULL));
 
 
 
@@ -210,6 +222,7 @@ int main(int argc,char **argv)
 
   printf("mu = %g\n", mu);
   printf("L_electrode = %.2g\n", N_sites_leads * spacing);
+  printf("ξ_0 / a = %.2g\n", xi_0 / spacing);
   printf("ξ_0 / L_electrode = %.2g\n", xi_0 / (N_sites_leads * spacing));
   printf("sc_gap = %g, m_eff = %g, hbar = %g\n", sc_gap, m_eff, const_hbar);
   printf("N_sites_x = %d, N_sites_y = %d, N_sites_JJ = %d\n", N_sites_x, N_sites_y, N_sites_JJ);
@@ -289,7 +302,7 @@ int main(int argc,char **argv)
 
       struct timespec  t_start, t_end;
       clock_gettime(CLOCK_REALTIME, &t_start);
-      set_pairing(Phi);
+      set_pairing(Phi, pairing_density);
       
     
       PetscCall(MatAssemblyBegin(H,MAT_FINAL_ASSEMBLY));
