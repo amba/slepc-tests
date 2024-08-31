@@ -113,11 +113,11 @@ static int allocate_matrix() {
   return 0;
 }
 
-static int set_normal_hamiltonian(PetscReal sc_gap,  PetscReal t_hopping, PetscReal mu, PetscReal disorder_potential) {
+static int set_normal_hamiltonian(PetscReal sc_gap,  PetscReal t_hopping, PetscReal mu, PetscReal disorder_potential, unsigned int seed) {
   // normalize hamiltonian with sc_gap
   mu /= sc_gap;
   t_hopping /= sc_gap;
-
+  srand(seed);
   for (int iy = 0; iy < N_sites_y; ++iy) {
     PetscInt block_start = 4 * N_sites_x * iy;
     for (int ix=0; ix < N_sites_x; ++ix) {
@@ -177,9 +177,10 @@ static int set_normal_hamiltonian(PetscReal sc_gap,  PetscReal t_hopping, PetscR
   return 0;
 }
 
-static int set_pairing(PetscReal Phi, PetscReal pairing_density) {
+static int set_pairing(PetscReal Phi, PetscReal pairing_density, unsigned int seed) {
   // need to assemble matrix after call
   // assume that H is scaled with 1/|Δ|
+  srand(seed);
   PetscReal factor;
   for (int iy = 0; iy < N_sites_y; ++iy) {
     PetscInt block_start = 4*N_sites_x * iy;
@@ -282,9 +283,14 @@ int main(int argc,char **argv)
 
   struct timespec  t_seed;
   clock_gettime(CLOCK_REALTIME, &t_seed);
-  uint seed = (uint) t_seed.tv_nsec;
-  printf("using for random seed: %u\n", seed);
-  srand(seed);
+  uint seed_pairing = (uint) t_seed.tv_nsec;
+  printf("pairing seed: %u\n", seed_pairing);
+
+  clock_gettime(CLOCK_REALTIME, &t_seed);
+  uint seed_potential = (uint) t_seed.tv_nsec;
+  printf("potential seed: %u\n", seed_potential);
+  
+  
   char filename[1024] = "output.dat";
   PetscReal mu = 10; // chemical potential (meV)
   PetscReal disorder_potential = 0; // relative to chemical potential mu
@@ -383,7 +389,7 @@ int main(int argc,char **argv)
   allocate_matrix();
   CHKMEMQ;
 
-  set_normal_hamiltonian(sc_gap, t_hopping, mu, disorder_potential);
+  set_normal_hamiltonian(sc_gap, t_hopping, mu, disorder_potential, seed_potential);
   CHKMEMQ;
   set_zeeman(EZX, EZY);
   CHKMEMQ;
@@ -394,7 +400,7 @@ int main(int argc,char **argv)
 
     struct timespec  t_start, t_end;
     clock_gettime(CLOCK_REALTIME, &t_start);
-    set_pairing(Phi, pairing_density);
+    set_pairing(Phi, pairing_density, seed_pairing);
       
     
     PetscCall(MatAssemblyBegin(H,MAT_FINAL_ASSEMBLY));
