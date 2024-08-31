@@ -41,12 +41,12 @@ has 'disorder' => (
     default => 0,
     );
 
-# has 'disorder_points' => (
-#     is => 'rw',
-#     isa => 'Int',
-#     documentation => 'Number of disorder configurations between zero and the maximum disorder potential (default: 20)',
-#     default => 20,
-#     );
+has 'pairing_density' => (
+    is => 'rw',
+    isa => 'Num',
+    documentation => 'pairing density',
+    default => 1
+    );
 
 has 'mu' => (
     is => 'rw',
@@ -54,13 +54,6 @@ has 'mu' => (
     documentation => 'chemical potential (meV)',
     default => 10,
     );
-
-# has 'EZX' => (
-#     is => 'rw',
-#     isa => 'Num',
-#     documentation => 'zeeman field in x-direction',
-#     default => 0,
-#     );
 
 has 'EZY' => (
     is => 'rw',
@@ -129,7 +122,7 @@ say "EZY values: @EZY_points";
 for my $ezy (@EZY_points) {
     say "ezy = $ezy";
     my $output_filename = sprintf("output_EZY=%.7g.dat", $ezy);
-    my @command = ("../$cmd",'-mu', $app->mu, '-JJlength', $app->JJ_length, '-leadlength', $app->lead_length, '-JJwidth', $app->width, '-dis', $app->disorder, '-EZX',0 , '-EZY', $ezy, '-alpha', $app->alpha, '-spectrum', $app->spectrum_range, '-output', $output_filename);
+    my @command = ("../$cmd",'-mu', $app->mu, '-JJlength', $app->JJ_length, '-leadlength', $app->lead_length, '-JJwidth', $app->width, '-dis', $app->disorder, '-EZX',0 , '-EZY', $ezy, '-alpha', $app->alpha, '-spectrum', $app->spectrum_range, '-pairing_density', $app->pairing_density, '-output', $output_filename);
     say "running command: @command";
     
     # open my $cmd_fh, '>', 'cmd.yml' or die "cannot open $!";
