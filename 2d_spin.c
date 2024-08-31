@@ -177,45 +177,39 @@ static int set_normal_hamiltonian(PetscReal sc_gap,  PetscReal t_hopping, PetscR
   return 0;
 }
 
-static int set_pairing(PetscReal Phi, PetscReal pairing_density, unsigned int seed) {
+static int set_pairing(PetscReal Phi) {
   // need to assemble matrix after call
   // assume that H is scaled with 1/|Δ|
-  srand(seed);
-  PetscReal factor;
   for (int iy = 0; iy < N_sites_y; ++iy) {
     PetscInt block_start = 4*N_sites_x * iy;
     // left lead
     for (int ix=0; ix < N_sites_leads; ++ix) {
-      factor = rand() < pairing_density * RAND_MAX ? 1 : 0;
-      PetscCall(MatSetValue(H,block_start + 4*ix,block_start + 4*ix+2, factor, INSERT_VALUES));
-      PetscCall(MatSetValue(H,block_start + 4*ix+2,block_start + 4*ix, factor, INSERT_VALUES));
+      PetscCall(MatSetValue(H,block_start + 4*ix,block_start + 4*ix+2, 1, INSERT_VALUES));
+      PetscCall(MatSetValue(H,block_start + 4*ix+2,block_start + 4*ix, 1, INSERT_VALUES));
         
-      PetscCall(MatSetValue(H,block_start + 4*ix+1,block_start + 4*ix+3, factor, INSERT_VALUES));
-      PetscCall(MatSetValue(H,block_start + 4*ix+3,block_start + 4*ix+1, factor, INSERT_VALUES));
-            
-      /* PetscCall(MatSetValue(H,block_start + 2*ix  ,block_start + 2*ix + 1, 1, INSERT_VALUES)); */
-      /* PetscCall(MatSetValue(H,block_start + 2*ix + 1  ,block_start + 2*ix, 1, INSERT_VALUES)); */
+      PetscCall(MatSetValue(H,block_start + 4*ix+1,block_start + 4*ix+3, 1, INSERT_VALUES));
+      PetscCall(MatSetValue(H,block_start + 4*ix+3,block_start + 4*ix+1, 1, INSERT_VALUES));
     }
 
     // right lead
     PetscScalar gap = PetscExpComplex(PETSC_i * Phi);
     for (int ix =N_sites_JJ + N_sites_leads; ix < N_sites_x; ++ix) {
-      factor = rand() < pairing_density * RAND_MAX ? 1 : 0;
-      PetscCall(MatSetValue(H,block_start + 4*ix,block_start + 4*ix+2, factor*gap, INSERT_VALUES));
-      PetscCall(MatSetValue(H,block_start + 4*ix+2,block_start + 4*ix, factor*PetscConjComplex(gap), INSERT_VALUES));
+      PetscCall(MatSetValue(H,block_start + 4*ix,block_start + 4*ix+2, gap, INSERT_VALUES));
+      PetscCall(MatSetValue(H,block_start + 4*ix+2,block_start + 4*ix, PetscConjComplex(gap), INSERT_VALUES));
         
-      PetscCall(MatSetValue(H,block_start + 4*ix+1,block_start + 4*ix+3, factor*gap, INSERT_VALUES));
-      PetscCall(MatSetValue(H,block_start + 4*ix+3,block_start + 4*ix+1, factor*PetscConjComplex(gap), INSERT_VALUES));
+      PetscCall(MatSetValue(H,block_start + 4*ix+1,block_start + 4*ix+3, gap, INSERT_VALUES));
+      PetscCall(MatSetValue(H,block_start + 4*ix+3,block_start + 4*ix+1, PetscConjComplex(gap), INSERT_VALUES));
     }
   }
   return 0;
 }
 
-static int set_zeeman(PetscReal EZX, PetscReal EZY) {
+static int set_zeeman(PetscReal EZX, PetscReal EZY, PetscBool zeeman_in_leads) {
   for (int iy = 0; iy < N_sites_y; ++iy) {
     PetscInt block_start = 4 * N_sites_x * iy;
     for (int ix=0; ix < N_sites_x; ++ix) {
-      
+      if (!zeeman_in_leads && (ix < N_sites_leads || ix >= N_sites_leads+N_sites_JJ))
+        continue;
       // electron
       PetscCall(MatSetValue(H,block_start + 4*ix,block_start + 4*ix+1, EZX -  PETSC_i*EZY, INSERT_VALUES));
       PetscCall(MatSetValue(H,block_start + 4*ix+1,block_start + 4*ix, EZX +  PETSC_i*EZY, INSERT_VALUES));
@@ -298,7 +292,9 @@ int main(int argc,char **argv)
   PetscReal EZY = 0;
   PetscReal alpha = 0; // (meV nm)
   PetscReal spectrum_range = 4; // calculate spectrum up to N_ABS_bound_states * spectrum_range
-  PetscReal pairing_density = 1;
+  //PetscReal pairing_density = 1;
+  PetscBool zeeman_in_leads = 0;
+  
   PetscCall(PetscOptionsGetReal(NULL,NULL,"-dis", &disorder_potential,NULL));
   PetscCall(PetscOptionsGetInt(NULL,NULL,"-leadlength",&N_sites_leads,NULL));
   PetscCall(PetscOptionsGetInt(NULL,NULL,"-JJlength",&N_sites_JJ,NULL));
@@ -308,7 +304,8 @@ int main(int argc,char **argv)
   PetscCall(PetscOptionsGetReal(NULL,NULL,"-EZY",&EZY,NULL));
   PetscCall(PetscOptionsGetReal(NULL,NULL,"-alpha",&alpha,NULL));
   PetscCall(PetscOptionsGetReal(NULL,NULL,"-spectrum",&spectrum_range,NULL));
-  PetscCall(PetscOptionsGetReal(NULL,NULL,"-pairing_density",&pairing_density,NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-zeeman_in_leads", &zeeman_in_leads, NULL));
+  //PetscCall(PetscOptionsGetReal(NULL,NULL,"-pairing_density",&pairing_density,NULL));
   PetscCall(PetscOptionsGetString(NULL, NULL, "-output", filename, sizeof(filename), NULL));
 
   
@@ -337,7 +334,8 @@ int main(int argc,char **argv)
   printf("λ_F = %.2g\n", lambda_F);
   printf("λ_F / a = %.2g\n", lambda_F / spacing);
   printf("ξ_0 = %.2g\n", xi_0);
-  printf("pairing density = %g\n", pairing_density);
+  printf("Zeeman in leads: %d\n", zeeman_in_leads);
+  //  printf("pairing density = %g\n", pairing_density);
   EPS            eps;         /* eigenproblem solver context */
   ST             st;          /* spectral transformation context */
   PetscScalar    kr,ki;
@@ -391,7 +389,7 @@ int main(int argc,char **argv)
 
   set_normal_hamiltonian(sc_gap, t_hopping, mu, disorder_potential, seed_potential);
   CHKMEMQ;
-  set_zeeman(EZX, EZY);
+  set_zeeman(EZX, EZY, zeeman_in_leads);
   CHKMEMQ;
   set_rasbha(alpha, sc_gap, spacing);
     
@@ -400,13 +398,14 @@ int main(int argc,char **argv)
 
     struct timespec  t_start, t_end;
     clock_gettime(CLOCK_REALTIME, &t_start);
-    set_pairing(Phi, pairing_density, seed_pairing);
+    set_pairing(Phi);
       
     
     PetscCall(MatAssemblyBegin(H,MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(H,MAT_FINAL_ASSEMBLY));
-    //PetscCall(MatView(H, PETSC_VIEWER_STDOUT_SELF));
+    //    PetscCall(MatView(H, PETSC_VIEWER_STDOUT_SELF));
     //exit(1);
+    
     PetscCall(EPSSetOperators(eps,H,NULL));
     PetscCall(EPSSolve(eps));
     clock_gettime(CLOCK_REALTIME, &t_end);
