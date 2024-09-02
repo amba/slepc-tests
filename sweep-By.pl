@@ -29,7 +29,7 @@ is => 'rw',
 has 'lead_length' => (
 is => 'rw',
     isa => 'Int',
-    documentation => 'number of sites of electrodes in x-direction (default: 400)',
+    documentation => 'number of sites of electrodes in x-direction',
     default => 400,
     );
 
@@ -37,7 +37,7 @@ is => 'rw',
 has 'disorder' => (
     is => 'rw',
     isa => 'Num',
-    documentation => 'choose maximum disorder potential in  [-mu * disorder, mu * disorder] (default: 4)',
+    documentation => 'choose maximum disorder potential in  [-mu * disorder, mu * disorder]',
     default => 0,
     );
 
@@ -62,7 +62,12 @@ has 'EZY_points' => (
     default => 11,
     );
 
-
+has 'zeeman_in_leads' => (
+    is => 'rw',
+    isa => 'Bool',
+    documentation => 'have Zeeman field in electrodes?',
+    default => 0,
+    );
 
 has 'alpha' => (
     is => 'rw',
@@ -115,7 +120,7 @@ say "EZY values: @EZY_points";
 for my $ezy (@EZY_points) {
     say "ezy = $ezy";
     my $output_filename = sprintf("output_EZY=%.7g.dat", $ezy);
-    my @command = ("../$cmd",'-mu', $app->mu, '-JJlength', $app->JJ_length, '-leadlength', $app->lead_length, '-JJwidth', $app->width, '-dis', $app->disorder, '-EZX',0 , '-EZY', $ezy, '-alpha', $app->alpha, '-spectrum', $app->spectrum_range, '-output', $output_filename);
+    my @command = ("../$cmd",'-mu', $app->mu, '-JJlength', $app->JJ_length, '-leadlength', $app->lead_length, '-JJwidth', $app->width, '-dis', $app->disorder, '-EZX',0 , '-EZY', $ezy, '-alpha', $app->alpha, '-spectrum', $app->spectrum_range, '-zeeman_in_leads', $app->zeeman_in_leads, '-output', $output_filename);
     say "running command: @command";
     
     # open my $cmd_fh, '>', 'cmd.yml' or die "cannot open $!";

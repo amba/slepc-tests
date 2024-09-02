@@ -421,7 +421,7 @@ int main(int argc,char **argv)
     PetscCheck(nconv >= N_evs, PETSC_COMM_WORLD, 1, "did not converge");
     PetscCall(PetscFPrintf(PETSC_COMM_WORLD, file, "%.10g\t", Phi / const_pi));
 
-    for (i = 0; i < N_evs; ++i) {
+    for (i = 0; i < nconv; ++i) {
       PetscCall(EPSGetEigenvalue(eps, i, &kr, &ki));
       PetscCall(PetscFPrintf(PETSC_COMM_WORLD, file, "%.10g\t", (double ) kr));
     }
