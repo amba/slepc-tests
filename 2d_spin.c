@@ -313,7 +313,7 @@ int main(int argc,char **argv)
   alpha *= 1e-3 * const_e * 1e-9;
   
   double m_eff = 0.036 * const_m_e;
-  double sc_gap = 100e-6*const_e;
+  double sc_gap = 200e-6*const_e;
   double k_F = sqrt(2 * m_eff * mu) / const_hbar;
   double v_F = const_hbar * k_F / m_eff;
   double xi_0 = const_hbar * v_F / (const_pi * sc_gap);
