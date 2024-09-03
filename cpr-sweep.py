@@ -51,6 +51,7 @@ datafiles = glob.glob('output*.dat')
 print("datafiles = ", datafiles)
 ezy_vals = []
 eta_vals = []
+phi0_vals = []
 
 output_data = []
 for file in (datafiles):
@@ -81,6 +82,11 @@ for file in (datafiles):
             # evs = evs[0:32]
             F_vals.append(-np.sum(evs))
         F_vals = np.array(F_vals)
+        imin = np.argmin(F_vals)
+        phi0 = phi_vals[imin]
+        if phi0 < -1:
+            phi0 += 2*np.pi
+        phi0_vals.append(phi_vals[imin])
         #plt.plot(phi_vals, F_vals, label="k_y = %g" % k_y)
         #plt.show()
         I_vals = np.gradient(F_vals)
@@ -120,5 +126,7 @@ plt.show()
 
 plt.plot(ezy_vals, eta_vals, '.')
 plt.grid()
+plt.show()
+plt.plot(ezy_vals, phi0_vals, '.')
 plt.show()
 save_3d_file('cpr.dat', output_data, "#EZY phi/pi I")
