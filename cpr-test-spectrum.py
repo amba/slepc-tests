@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import scipy.signal
 from scipy.optimize import curve_fit
 import glob
+from matplotlib import cm
 
 if np.__version__ < '1.14.1':
     sys.exit("numpy version " + np.__version__ + " is too old")
@@ -92,7 +93,7 @@ def plot_cpr(block, use_num_evs):
     #I_vals = np.gradient(F_vals)
     # I_vals /= np.amax(I_vals)
     #plt.plot(phi_vals, F_vals, '.', label=file)
-    plt.plot(phi_vals, I_vals, '.', label="num evs = %d" % use_num_evs)
+    plt.plot(phi_vals, I_vals, '.', c=cm.plasma(use_num_evs / num_evs))
     #plt.plot(phi_vals, cpr_KO1(phi_vals+0.0001, *fit[0]), label="KO1-fit")
 #plt.plot(phi_vals, cpr(phi_vals, *fit_tau[0]), label="tau = %g" % fit_tau[0][0])
 # print("data: ", output_data)
