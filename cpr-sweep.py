@@ -84,11 +84,12 @@ for file in (datafiles):
         F_vals = np.array(F_vals)
         I_vals = np.gradient(F_vals)/np.gradient(phi_vals)
         I_prime_vals = np.gradient(I_vals) / np.gradient(phi_vals)
+        i_zero = np.argmin(np.abs(phi_vals))
+
         phi0 = -I_vals[i_zero] / I_prime_vals[i_zero]
         Icp = np.amax(I_vals)
         Icm = np.amin(I_vals)
         eta = (Icp + Icm) / (Icp - Icm)
-        i_zero = np.argmin(np.abs(phi_vals))
         if phi0 < -1:
             phi0 += 2*np.pi
         phi0_vals.append(phi_vals[imin])
