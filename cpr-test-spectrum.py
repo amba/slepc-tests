@@ -58,6 +58,10 @@ print("num_evs = ", num_evs)
 phi_vals = data[0,:,0]
 N_phi = phi_vals.size
 
+phi0_vals = []
+eta_vals = []
+num_evs_vals = []
+
 def plot_cpr(block, use_num_evs):
     F_vals = []
     ev_vals = []
@@ -71,12 +75,17 @@ def plot_cpr(block, use_num_evs):
         # evs = evs[0:32]
         F_vals.append(-np.sum(evs))
     F_vals = np.array(F_vals)
-    imin = np.argmin(F_vals)
-    I_vals = np.gradient(F_vals)
+    
+    i_zero = np.argmin(np.abs(phi_vals))
+    
+    I_vals = np.gradient(F_vals)/np.gradient(phi_vals)
+    
+    I_prime_vals = np.gradient(I_vals) / np.gradient(phi_vals)
+    phi0 = -I_vals[i_zero] / I_prime_vals[i_zero]
     Icp = np.amax(I_vals)
     Icm = np.amin(I_vals)
     eta = (Icp + Icm) / (Icp - Icm)
-    print("num_evs = %d, eta = %g" % (use_num_evs, eta))
+    print("num_evs = %d, eta = %g, phi0 = %g" % (use_num_evs, eta, phi0))
     #print("data block: ", data_block)
     #p0 = [0.8, np.amax(I_vals)]
     #p0 = [np.amax(I_vals),]
@@ -99,7 +108,7 @@ def plot_cpr(block, use_num_evs):
 # print("data: ", output_data)
 
 
-for use_evs in range(10,num_evs,10):
+for use_evs in range(10,num_evs+1):
     plot_cpr(data[0], use_evs)
 plt.legend()
 plt.grid()
