@@ -86,6 +86,10 @@ def plot_cpr(block, use_num_evs):
     Icm = np.amin(I_vals)
     eta = (Icp + Icm) / (Icp - Icm)
     print("num_evs = %d, eta = %g, phi0 = %g" % (use_num_evs, eta, phi0))
+    num_evs_vals.append(use_num_evs)
+    phi0_vals.append(phi0)
+    eta_vals.append(eta)
+    
     #print("data block: ", data_block)
     #p0 = [0.8, np.amax(I_vals)]
     #p0 = [np.amax(I_vals),]
@@ -112,4 +116,10 @@ for use_evs in range(10,num_evs+1):
     plot_cpr(data[0], use_evs)
 plt.legend()
 plt.grid()
+plt.show()
+plt.ylabel('phi0 / pi')
+plt.plot(num_evs_vals, phi0_vals)
+plt.show()
+plt.ylabel('eta')
+plt.plot(num_evs_vals, eta_vals)
 plt.show()
