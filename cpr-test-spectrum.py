@@ -90,26 +90,7 @@ def plot_cpr(block, use_num_evs):
     phi0_vals.append(phi0)
     eta_vals.append(eta)
     
-    #print("data block: ", data_block)
-    #p0 = [0.8, np.amax(I_vals)]
-    #p0 = [np.amax(I_vals),]
-    #istart = np.argmin(phi_vals < 0)
-    #iend = np.argmin(phi_vals[istart+1:] < 1)
-    # fit = curve_fit(cpr_KO1, phi_vals+0.0001, I_vals, p0 = p0)
-    # fit_tau = curve_fit(cpr, phi_vals, I_vals, p0=[0.9, np.amax(I_vals)])
-    # print(fit)
-
-    #    plt.plot(phi_vals / np.pi, ev_vals)
-    #    plt.grid()
-    #    plt.show()
-    #    plt.plot(phi_vals, F_vals, '.', label="disorder = %g" % k_y)
-    #I_vals = np.gradient(F_vals)
-    # I_vals /= np.amax(I_vals)
-    #plt.plot(phi_vals, F_vals, '.', label=file)
     plt.plot(phi_vals, I_vals, '.', c=cm.plasma(use_num_evs / num_evs))
-    #plt.plot(phi_vals, cpr_KO1(phi_vals+0.0001, *fit[0]), label="KO1-fit")
-#plt.plot(phi_vals, cpr(phi_vals, *fit_tau[0]), label="tau = %g" % fit_tau[0][0])
-# print("data: ", output_data)
 
 
 for use_evs in range(10,num_evs+1):
