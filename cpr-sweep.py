@@ -82,17 +82,19 @@ for file in (datafiles):
             # evs = evs[0:32]
             F_vals.append(-np.sum(evs))
         F_vals = np.array(F_vals)
-        imin = np.argmin(F_vals)
-        phi0 = phi_vals[imin]
+        I_vals = np.gradient(F_vals)/np.gradient(phi_vals)
+        I_prime_vals = np.gradient(I_vals) / np.gradient(phi_vals)
+        phi0 = -I_vals[i_zero] / I_prime_vals[i_zero]
+        Icp = np.amax(I_vals)
+        Icm = np.amin(I_vals)
+        eta = (Icp + Icm) / (Icp - Icm)
+        i_zero = np.argmin(np.abs(phi_vals))
         if phi0 < -1:
             phi0 += 2*np.pi
         phi0_vals.append(phi_vals[imin])
         #plt.plot(phi_vals, F_vals, label="k_y = %g" % k_y)
         #plt.show()
-        I_vals = np.gradient(F_vals)
-        Icp = np.amax(I_vals)
-        Icm = np.amin(I_vals)
-        eta = (Icp + Icm) / (Icp - Icm)
+
         eta_vals.append(eta)
         print("eta = %g" % (eta,))
         data_block = np.array([np.ones_like(phi_vals)*EZY, phi_vals, F_vals, I_vals]).T
