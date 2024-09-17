@@ -92,7 +92,7 @@ for file in (datafiles):
         eta = (Icp + Icm) / (Icp - Icm)
         if phi0 < -1:
             phi0 += 2*np.pi
-        phi0_vals.append(phi_vals[imin])
+        phi0_vals.append(phi0)
         #plt.plot(phi_vals, F_vals, label="k_y = %g" % k_y)
         #plt.show()
 
